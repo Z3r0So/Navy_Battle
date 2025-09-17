@@ -14,6 +14,15 @@ public class Boat {
         this.life = length;
         this.isSunk = false;
     }
+    //Creation of method for the damage of the boat
+    public void impacted() {
+        if(!isSunk) {
+            life--;
+            if (life == 0) {
+                isSunk = true;
+            }
+        }
+    }
     // Method for verification of Sunking
     public boolean isSunked() {
         return isSunk;
