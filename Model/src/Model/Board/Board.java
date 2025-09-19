@@ -12,6 +12,7 @@ public class Board {
         this.rows = rows;
         this.columns = columns;
         this.board = new int[rows][columns];
+        initialize();
     }
 
     //Initialize the board by filling it with 0 (0 means that it is empty)
@@ -22,7 +23,6 @@ public class Board {
             }
         }
     }
-
     //Logic for the placement of the ship
     public boolean placeShip(Boat boat, int row, int column, boolean horizontal) {
         //First we are going to verify if the selected boat is able to place horizontal
@@ -87,5 +87,4 @@ public class Board {
         }
         return true;
     }
-
 }

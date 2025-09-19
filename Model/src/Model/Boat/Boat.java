@@ -16,7 +16,7 @@ public class Boat {
     }
     //Creation of method for the damage of the boat
     public void impacted() {
-        if(!isSunk) {
+        if(!isSunk && life > 0) {
             life--;
             if (life == 0) {
                 isSunk = true;
@@ -24,9 +24,6 @@ public class Boat {
         }
     }
     // Method for verification of Sunking
-    public boolean isSunked() {
-        return isSunk;
-    }
     public boolean isSunk() {
         return isSunk;
     }
