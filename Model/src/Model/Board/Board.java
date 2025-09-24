@@ -28,13 +28,20 @@ public class Board {
         for (int i = 0; i < rows; i++) {
             for (int j = 0; j < columns; j++) {
                 board[i][j] = 0;
-                boatGrid = null;
+                boatGrid[i][j] = null;
             }
-            boatList.clear();
         }
+        boatList.clear();
     }
 
-    //Logic for the placement of the ship
+    /*Logic for the placement of the ship
+    @Boat boat is the boat that we want to place
+    @int row is the row where we want to place the boat
+    @int column is the column where we want to place the boat
+    @boolean horizontal is true if we want to place the boat horizontally, false if we want
+    to place it vertically
+    This method will return true if the boat was placed successfully, false otherwise
+     */
     public boolean placeShip(Boat boat, int row, int column, boolean horizontal) {
         //First we are going to verify if the selected boat is able to place horizontal
         if (horizontal && column + boat.getLength() > columns) {
@@ -71,11 +78,14 @@ public class Board {
         return true;
     }
 
-    //Method for the shooting of the enemy boat
+    /*Method for the shooting of the enemy boat
+    * @row and @column are the coordinates of the shoot, not the size of the board
+    * This method will return a String with the result of the shoot
+    * */
     public String shootEnemyBoat(int row, int column) {
         if (board[row][column] == 1) {
             board[row][column] = 3; // Mark as hit (3)
-            Boat hitBoat = boatGrid[row][column];
+            Boat hitBoat = boatGrid[row][column]; //Object of type boat is assigned to the position of the boat that was hit in the board
             hitBoat.impacted();
             if (hitBoat.isSunk()) {
                 return "Sunk";
@@ -92,15 +102,21 @@ public class Board {
     /*
      * @row and @column are the coordinates of the shoot, not the size of the board
      * This method will verify if the shoot is valid or not
-     * It will return true if the shoot is valid, false otherwise
+     * @return It will return true if the shoot is valid, false otherwise
      * */
     public boolean validShoot(int row, int column) {
-        return (row >= 0 && row < rows &&
-                column >= 0 && column < columns && (board[row][column] != 2 && board[row][column] != 3));
-
+        // We verify if the coordinates are within the board limits
+        if (row < 0 || row >= rows || column < 0 || column >= columns) {
+            return false;
+        }
+        // Only valid if the boat is not already hit
+        return board[row][column] == 0 || board[row][column] == 1;
     }
+    /*Method for the verification of the sinking of all the boats
+    @return This method will return true if all the boats are sunk, false otherwise
+    * */
     public boolean allBoatsSunk() {
-        for (Boat boat : boatList) {
+        for (Boat boat : boatList) { // Iterate through all boats
             if (!boat.isSunk()) {
                 return false;
             }
@@ -120,4 +136,6 @@ public class Board {
     public List<Boat> getBoatList() {
         return boatList;
     }
+    public Boat getBoatAt(int row, int column) { return boatGrid[row][column]; }
+    public int[][] getBoardState() { return board.clone(); } // Copia para seguridad
 }

@@ -25,6 +25,7 @@ public class MatchController {
                 System.out.println("Error starting new match: " + e.getMessage());
                 return false;
             }
+            return true;
         }
         public void setPlayerShips(Player player) {
             Boat[] boats = {
