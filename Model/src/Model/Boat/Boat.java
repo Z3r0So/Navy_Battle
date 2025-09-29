@@ -38,8 +38,19 @@ public class Boat {
             }
         }
     }
-
-
+    /*Method to check if the boat occupies a specific position
+    *@int row is the row where we want to check if the boat is occupying
+    * @int col is the column where we want to check if the boat is occupying
+    * @return boolean true if the boat occupies the position, false otherwise
+    * */
+    public boolean occupiesPosition(int row, int col) {
+        for (int[] pos : positions) {
+            if (pos[0] == row && pos[1] == col) {
+                return true;
+            }
+        }
+        return false;
+    }
     /*Creation of method for the damage to the boat
     * */
     public void impacted() {

@@ -3,7 +3,6 @@ package Model.Board;
 import Model.Boat.Boat;
 
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
 
 public class Board {
@@ -34,13 +33,30 @@ public class Board {
         boatList.clear();
     }
 
-    /*Logic for the placement of the ship
+    public void markAttack(int row, int column, boolean hit) {
+        if (row >= 0 && row < rows && column >= 0 && column < columns) {
+            if (hit) {
+                board[row][column] = 3; // 3 = Hit
+            } else {
+                board[row][column] = 2; // 2 = Miss
+            }
+        }
+    }
+
+    /**Logic for the placement of the ship
     @Boat boat is the boat that we want to place
     @int row is the row where we want to place the boat
     @int column is the column where we want to place the boat
     @boolean horizontal is true if we want to place the boat horizontally, false if we want
     to place it vertically
     This method will return true if the boat was placed successfully, false otherwise
+    @return boolean
+    0 = empty
+    1 = occupied by a boat
+    2 = missed shot (water)
+    3 = hit shot (impact)
+    4 = sunk boat (not used in the board, but can be useful for future implementations)
+    *
      */
     public boolean placeShip(Boat boat, int row, int column, boolean horizontal) {
         //First we are going to verify if the selected boat is able to place horizontal
@@ -74,12 +90,37 @@ public class Board {
                 boatGrid[row + i][column] = boat;
             }
         }
+        // Set the positions of the boat and add it to the list of boats
+        boat.setPositions(row, column, horizontal);
         boatList.add(boat);
         return true;
     }
+    /**Method for the removal of a ship from the board
+    @Boat boat is the boat that we want to remove
+    This method will return true if the boat was removed successfully, false otherwise
+    @return boolean
+    * */
+    public boolean removeShip(Boat boat) {
+        if (!boatList.contains(boat)) {
+            return false;
+        }
+        // Remove the boat from the board
+        for (int[] pos : boat.getPositions()) {
+            int row = pos[0];
+            int col = pos[1];
+            if (row >= 0 && row < rows && col >= 0 && col < columns) {
+                board[row][col] = 0;
+                boatGrid[row][col] = null;
+            }
+        }
 
-    /*Method for the shooting of the enemy boat
-    * @row and @column are the coordinates of the shoot, not the size of the board
+        boatList.remove(boat);
+        return true;
+    }
+
+    /**Method for the shooting of the enemy boat
+    * @row and
+     * @column are the coordinates of the shoot, not the size of the board
     * This method will return a String with the result of the shoot
     * */
     public String shootEnemyBoat(int row, int column) {
@@ -99,8 +140,9 @@ public class Board {
         }
     }
 
-    /*
-     * @row and @column are the coordinates of the shoot, not the size of the board
+    /**
+     * @row and
+     * @column are the coordinates of the shoot, not the size of the board
      * This method will verify if the shoot is valid or not
      * @return It will return true if the shoot is valid, false otherwise
      * */
@@ -112,7 +154,7 @@ public class Board {
         // Only valid if the boat is not already hit
         return board[row][column] == 0 || board[row][column] == 1;
     }
-    /*Method for the verification of the sinking of all the boats
+    /**Method for the verification of the sinking of all the boats
     @return This method will return true if all the boats are sunk, false otherwise
     * */
     public boolean allBoatsSunk() {
@@ -122,6 +164,18 @@ public class Board {
             }
         }
         return true;
+    }
+    /**Method to get the number of remaining boats
+    @return This method will return the number of remaining boats
+    * */
+    public int getRemainingBoats() {
+        int count = 0;
+        for (Boat boat : boatList) {
+            if (!boat.isSunk()) {
+                count++;
+            }
+        }
+        return count;
     }
 
     public int getRows() {
@@ -137,5 +191,5 @@ public class Board {
         return boatList;
     }
     public Boat getBoatAt(int row, int column) { return boatGrid[row][column]; }
-    public int[][] getBoardState() { return board.clone(); } // Copia para seguridad
+    public int[][] getBoardState() { return board.clone(); }
 }

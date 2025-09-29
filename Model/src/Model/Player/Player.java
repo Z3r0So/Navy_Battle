@@ -52,5 +52,14 @@ public abstract class Player {
         attackBoard.initialize();
     }
     //Abstract method that will be implemented in the subclasses
-    public abstract Attack makeattack(Board enemyBoard);
+    /**Method to make an attack on the enemy board.
+     * The machine uses a combination of hunt mode and target mode strategies.
+     * In hunt mode, it attacks in a checkerboard pattern to maximize coverage.
+     * In target mode, it focuses on adjacent cells after a hit to try to sink the ship.
+     * It also includes optimizations to prioritize linear continuations of hits.
+     *
+     * @param enemyBoard The board of the enemy player where the attack will be made.
+     * @return An Attack object representing the chosen attack coordinates.
+    * */
+    public abstract Attack makeAttack(Board enemyBoard);
 }
