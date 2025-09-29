@@ -37,21 +37,30 @@ public class Match {
             return player;
         }
     }
+    /**Method for executing an attack.
+     * This method applies the given attack to the target player's board,
+     * checks if the game has ended, and switches turns if necessary.
+     * @param attack The attack to be executed.
+     * @param attacker The player executing the attack.
+     * @param target The player being attacked.
+     * @return A string indicating the result of the attack (e.g., "Hit", "Miss", "Sunk").
+    * */
     public String executeAttack(Attack attack, Player attacker, Player target) {
-        Board targetBoard;
+        Board targetBoard = target.getOwnBoard();
+
         if (target == player) {
             targetBoard = player.getOwnBoard();
         } else {
             targetBoard = machine.getOwnBoard();
         }
 
-        // Aplicar el ataque al tablero
+        //Apply the attack to the target's board
         String result = attack.apply(targetBoard);
 
-        // Verificar si el juego terminó después del ataque
+        //Verify if the game has ended after the attack
         checkGameEnd();
 
-        // Si el ataque no fue un impacto ni hundió un barco, cambiar el turno
+        // If the attack was a miss, switch turns
         boolean isHit = result.contains("Hit");
         boolean isSunk = result.contains("Sunk");
         if (!isHit && !isSunk) {
@@ -60,7 +69,10 @@ public class Match {
 
         return result;
     }
-    //
+    /**Method to check if the game has ended.
+     * This method checks if either player has all their boats sunk.
+     * If so, it sets the game as finished and declares the winner.
+    * */
     private void checkGameEnd() {
         if (player.getOwnBoard().allBoatsSunk()) {
             gameFinished = true;
@@ -72,6 +84,7 @@ public class Match {
             player.addWins();
         }
     }
+
 
     public Player getPlayer() {
         return player;
