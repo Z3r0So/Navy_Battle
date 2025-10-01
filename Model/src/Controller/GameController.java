@@ -52,11 +52,12 @@ public class GameController {
      * @return true if all ships were placed successfully, false otherwise
      */
     private boolean placeShipsAutomatically(Player player) {
-        // Flota estándar de batalla naval
         Boat[] fleet = {
+                new Aircrafter(),
                 new Aircrafter(),
                 new Cruise(),
                 new Cruise(),
+                new Destructor(),
                 new Destructor(),
                 new Destructor(),
                 new Submarine(),

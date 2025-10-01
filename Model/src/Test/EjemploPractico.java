@@ -5,7 +5,7 @@ import Model.Boat.Boat;
 import Model.Boat.Destructor;
 
 public class EjemploPractico {
-        public static void main(String[] args) {
+        /*public static void main(String[] args) {
             // 1. Crear tablero y barco
             Board board = new Board(10, 10);
             Boat destructor = new Destructor(); // Longitud 3
@@ -88,4 +88,5 @@ public class EjemploPractico {
                 System.out.println();
             }
         }
+         */
     }
