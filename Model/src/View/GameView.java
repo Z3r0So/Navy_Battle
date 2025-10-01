@@ -1,6 +1,8 @@
 package View;
 
 import Controller.GameController;
+import Model.Boat.Boat;
+import Model.Player.HumanPlayer;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
@@ -15,7 +17,6 @@ public class GameView extends JFrame {
     private static final int GRID_SIZE = 10;
     private static final Color WATER_COLOR = new Color(174, 190, 239);
     private static final Color GRID_LINE_COLOR = new Color(100, 177, 210);
-    private static final Color SHIP_PLAYER_COLOR = new Color(100, 126, 230, 255);
     private static final Color SHIP_HIT_COLOR = new Color(230, 80, 80);
     private static final Color MISS_COLOR = new Color(110, 195, 227, 255);
     private static final Color SELECTED_COLOR = new Color(255, 234, 7, 255);
@@ -27,17 +28,17 @@ public class GameView extends JFrame {
     private JLabel enemyShipsLabel;
     private JLabel turnLabel;
     private JButton attackButton;
+    private JButton crossBombButton;
     private JTextArea logArea;
-
+    private JLabel powerUpsLabel;
 
     private int selectedRow = -1;
     private int selectedCol = -1;
-    private JPanel panel1;
 
     public GameView() {
         controller = new GameController();
 
-        //Start a new game with default player
+        // Start a new game with default player
         boolean gameStarted = controller.startNewGame("Player", "password");
         if (!gameStarted) {
             JOptionPane.showMessageDialog(this, "Couldn't start a new game",
@@ -48,6 +49,27 @@ public class GameView extends JFrame {
         initComponents();
         updateBoards();
         updateGameInfo();
+        updatePowerUpsDisplay();
+    }
+
+    /**
+     * Get the color for a specific boat type
+     * @param boatType the type of the boat
+     * @return the Color object for that boat type
+     */
+    private Color getBoatColor(String boatType) {
+        switch (boatType) {
+            case "Portaaviones": // Aircrafter
+                return new Color(128, 128, 128); // Gray
+            case "Cruise":
+                return new Color(0, 100, 150); // Dark Blue
+            case "Destructor":
+                return new Color(200, 100, 0); // Orange
+            case "Submarine":
+                return new Color(0, 150, 0); // Green
+            default:
+                return new Color(100, 126, 230); // Default blue
+        }
     }
 
     private void initComponents() {
@@ -101,10 +123,7 @@ public class GameView extends JFrame {
         boardsPanel.setLayout(new FlowLayout(FlowLayout.CENTER, 40, 30));
         boardsPanel.setBackground(new Color(224, 247, 250));
 
-
         JPanel playerSection = createBoardSection("Your Crew", true);
-
-
         JPanel enemySection = createBoardSection("Enemy Board", false);
 
         boardsPanel.add(playerSection);
@@ -118,13 +137,11 @@ public class GameView extends JFrame {
         section.setLayout(new BoxLayout(section, BoxLayout.Y_AXIS));
         section.setBackground(new Color(224, 247, 250));
 
-        //
         JLabel titleLabel = new JLabel(title);
         titleLabel.setFont(new Font("Arial", Font.BOLD, 18));
         titleLabel.setForeground(new Color(0, 96, 100));
         titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        //
         JPanel boardContainer = new JPanel() {
             @Override
             protected void paintComponent(Graphics g) {
@@ -139,7 +156,7 @@ public class GameView extends JFrame {
         boardContainer.setOpaque(false);
         boardContainer.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
 
-        //Board Creation
+        // Board Creation
         BoardPanel board = new BoardPanel(isPlayerBoard);
         if (isPlayerBoard) {
             playerBoard = board;
@@ -168,14 +185,31 @@ public class GameView extends JFrame {
 
         return section;
     }
-    /**Method to create the information panel on the right side
-     * Contains the game log
-    * */
+
+    /**
+     * Method to create the information panel on the right side
+     * Contains the game log and power-ups info
+     */
     private JPanel createInfoPanel() {
         JPanel infoPanel = new JPanel(new BorderLayout(10, 10));
         infoPanel.setPreferredSize(new Dimension(250, 0));
         infoPanel.setBackground(Color.WHITE);
         infoPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        // Power-ups section
+        JPanel powerUpsPanel = new JPanel();
+        powerUpsPanel.setLayout(new BoxLayout(powerUpsPanel, BoxLayout.Y_AXIS));
+        powerUpsPanel.setBackground(Color.WHITE);
+        powerUpsPanel.setBorder(BorderFactory.createTitledBorder("POWER-UPS"));
+
+        powerUpsLabel = new JLabel("Cross Bombs: 2");
+        powerUpsLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        powerUpsLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        powerUpsPanel.add(powerUpsLabel);
+
+        // Log section
+        JPanel logPanel = new JPanel(new BorderLayout());
+        logPanel.setBackground(Color.WHITE);
 
         JLabel logTitle = new JLabel("GAME LOG");
         logTitle.setFont(new Font("Arial", Font.BOLD, 16));
@@ -188,16 +222,21 @@ public class GameView extends JFrame {
         logArea.setWrapStyleWord(true);
 
         JScrollPane scrollPane = new JScrollPane(logArea);
-        scrollPane.setPreferredSize(new Dimension(230, 400));
+        scrollPane.setPreferredSize(new Dimension(230, 350));
 
-        infoPanel.add(logTitle, BorderLayout.NORTH);
-        infoPanel.add(scrollPane, BorderLayout.CENTER);
+        logPanel.add(logTitle, BorderLayout.NORTH);
+        logPanel.add(scrollPane, BorderLayout.CENTER);
+
+        infoPanel.add(powerUpsPanel, BorderLayout.NORTH);
+        infoPanel.add(logPanel, BorderLayout.CENTER);
 
         return infoPanel;
     }
-    /**Method to create the action panel at the bottom
-     * Contains the status label, attack button and new game button
-    * */
+
+    /**
+     * Method to create the action panel at the bottom
+     * Contains the status label, attack buttons and new game button
+     */
     private JPanel createActionPanel() {
         JPanel actionPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 15));
         actionPanel.setBackground(new Color(0, 131, 143));
@@ -208,7 +247,7 @@ public class GameView extends JFrame {
 
         attackButton = new JButton("ATTACK");
         attackButton.setFont(new Font("Arial", Font.BOLD, 16));
-        attackButton.setPreferredSize(new Dimension(150, 40));
+        attackButton.setPreferredSize(new Dimension(130, 40));
         attackButton.setBackground(new Color(255, 87, 34));
         attackButton.setForeground(Color.WHITE);
         attackButton.setFocusPainted(false);
@@ -217,9 +256,20 @@ public class GameView extends JFrame {
         attackButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         attackButton.addActionListener(e -> executeAttack());
 
+        crossBombButton = new JButton("CROSS BOMB");
+        crossBombButton.setFont(new Font("Arial", Font.BOLD, 14));
+        crossBombButton.setPreferredSize(new Dimension(130, 40));
+        crossBombButton.setBackground(new Color(156, 39, 176));
+        crossBombButton.setForeground(Color.WHITE);
+        crossBombButton.setFocusPainted(false);
+        crossBombButton.setBorderPainted(false);
+        crossBombButton.setEnabled(false);
+        crossBombButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        crossBombButton.addActionListener(e -> executeCrossBombAttack());
+
         JButton resetButton = new JButton("NEW GAME");
         resetButton.setFont(new Font("Arial", Font.PLAIN, 14));
-        resetButton.setPreferredSize(new Dimension(150, 40));
+        resetButton.setPreferredSize(new Dimension(130, 40));
         resetButton.setBackground(new Color(76, 175, 80));
         resetButton.setForeground(Color.WHITE);
         resetButton.setFocusPainted(false);
@@ -228,12 +278,14 @@ public class GameView extends JFrame {
         resetButton.addActionListener(e -> resetGame());
 
         actionPanel.add(statusLabel);
-        actionPanel.add(Box.createHorizontalStrut(50));
+        actionPanel.add(Box.createHorizontalStrut(30));
         actionPanel.add(attackButton);
+        actionPanel.add(crossBombButton);
         actionPanel.add(resetButton);
 
         return actionPanel;
     }
+
     /**
      * Custom JPanel to represent a game board
      * Handles rendering, clicks, and hover effects
@@ -276,15 +328,20 @@ public class GameView extends JFrame {
                 return;
             }
 
-            int col = x / CELL_SIZE; //We divide by CELL_SIZE to get the coordinates of the cell
+            int col = x / CELL_SIZE;
             int row = y / CELL_SIZE;
 
-            if (row >= 0 && row < GRID_SIZE && col >= 0 && col < GRID_SIZE) { // Verifies if the click is within the board
+            if (row >= 0 && row < GRID_SIZE && col >= 0 && col < GRID_SIZE) {
                 selectedRow = row;
                 selectedCol = col;
                 statusLabel.setText("Cell (" + row + "," + col + ") Selected - press ATTACK");
                 attackButton.setEnabled(true);
-                repaint();
+                updateCrossBombButton();
+                // Force immediate repaint
+                SwingUtilities.invokeLater(() -> {
+                    repaint();
+                    paintImmediately(getBounds());
+                });
             }
         }
 
@@ -307,18 +364,7 @@ public class GameView extends JFrame {
         }
 
         public void updateBoard(int[][] newState) {
-            // Debug
-            if (!isPlayerBoard) {
-                int nonZeroCount = 0;
-                for (int i = 0; i < GRID_SIZE; i++) {
-                    for (int j = 0; j < GRID_SIZE; j++) {
-                        if (newState[i][j] != 0) nonZeroCount++;
-                    }
-                }
-                System.out.println("Updating enemy board. Cells with a state != 0: " + nonZeroCount);
-            }
-
-            //Copy state
+            // Copy state
             for (int i = 0; i < GRID_SIZE; i++) {
                 for (int j = 0; j < GRID_SIZE; j++) {
                     this.boardState[i][j] = newState[i][j];
@@ -348,16 +394,16 @@ public class GameView extends JFrame {
                     g2d.setColor(cellColor);
                     g2d.fill(new RoundRectangle2D.Double(x, y, CELL_SIZE - 2, CELL_SIZE - 2, 5, 5));
 
-                    // Borde
+                    // Border
                     g2d.setColor(GRID_LINE_COLOR);
                     g2d.setStroke(new BasicStroke(1));
                     g2d.draw(new RoundRectangle2D.Double(x, y, CELL_SIZE - 2, CELL_SIZE - 2, 5, 5));
 
-                    //
+                    // Draw cell content with ship colors
                     int state = boardState[row][col];
-                    drawCellContent(g2d, x, y, state);
+                    drawCellContent(g2d, x, y, row, col, state);
 
-                    //
+                    // Highlight selected cell
                     if (!isPlayerBoard && selectedRow == row && selectedCol == col) {
                         g2d.setColor(SELECTED_COLOR);
                         g2d.setStroke(new BasicStroke(3));
@@ -373,22 +419,45 @@ public class GameView extends JFrame {
                 }
             }
         }
-        /**Method to draw the content of each cell based on its state
+
+        /**
+         * Method to draw the content of each cell based on its state
          * @param g2d the Graphics2D object for drawing
          * @param x the x coordinate of the cell
          * @param y the y coordinate of the cell
+         * @param row the row position in the grid
+         * @param col the column position in the grid
          * @param state the state of the cell (0: empty, 1: ship, 2: miss, 3: hit)
-        * */
-        private void drawCellContent(Graphics2D g2d, int x, int y, int state) {
+         */
+        private void drawCellContent(Graphics2D g2d, int x, int y, int row, int col, int state) {
             int centerX = x + CELL_SIZE / 2;
             int centerY = y + CELL_SIZE / 2;
             int radius = CELL_SIZE / 2 - 5;
 
             switch (state) {
-                case 1: //
+                case 1: // Ship
                     if (isPlayerBoard) {
-                        g2d.setColor(SHIP_PLAYER_COLOR);
+                        // Get the boat at this position to use its color
+                        Boat boat = controller.getCurrentMatch().getPlayer()
+                                .getOwnBoard().getBoatAt(row, col);
+
+                        Color shipColor;
+                        if (boat != null) {
+                            shipColor = getBoatColor(boat.getType());
+                        } else {
+                            shipColor = new Color(100, 126, 230); // Default color
+                        }
+
+                        g2d.setColor(shipColor);
                         g2d.fill(new Ellipse2D.Double(
+                                centerX - radius, centerY - radius,
+                                radius * 2, radius * 2
+                        ));
+
+                        // Add a border to delimit the ship
+                        g2d.setColor(Color.BLACK);
+                        g2d.setStroke(new BasicStroke(2));
+                        g2d.draw(new Ellipse2D.Double(
                                 centerX - radius, centerY - radius,
                                 radius * 2, radius * 2
                         ));
@@ -410,10 +479,123 @@ public class GameView extends JFrame {
                             centerX - radius, centerY - radius,
                             radius * 2, radius * 2
                     ));
+
+                    // Draw X mark for hit
+                    g2d.setColor(Color.WHITE);
+                    g2d.setStroke(new BasicStroke(3));
+                    int markSize = radius / 2;
+                    g2d.drawLine(centerX - markSize, centerY - markSize,
+                            centerX + markSize, centerY + markSize);
+                    g2d.drawLine(centerX + markSize, centerY - markSize,
+                            centerX - markSize, centerY + markSize);
                     break;
             }
         }
     }
+
+    /**
+     * Update the Cross Bomb button state based on available power-ups
+     */
+    private void updateCrossBombButton() {
+        if (controller.getCurrentMatch() != null) {
+            HumanPlayer human = (HumanPlayer) controller.getCurrentMatch().getPlayer();
+            boolean hasBombs = human.getPowerUps().hasCrossBombs();
+            crossBombButton.setEnabled(hasBombs && selectedRow != -1 && selectedCol != -1);
+        }
+    }
+
+    /**
+     * Update power-ups display
+     */
+    private void updatePowerUpsDisplay() {
+        if (controller.getCurrentMatch() != null) {
+            HumanPlayer human = (HumanPlayer) controller.getCurrentMatch().getPlayer();
+            int bombs = human.getPowerUps().getCrossBombs();
+            powerUpsLabel.setText("Cross Bombs: " + bombs);
+        }
+    }
+
+    /**
+     * Executes the Cross Bomb attack
+     */
+    private void executeCrossBombAttack() {
+        if (selectedRow == -1 || selectedCol == -1) {
+            return;
+        }
+
+        int attackRow = selectedRow;
+        int attackCol = selectedCol;
+
+        // Debugging info
+        System.out.println("\n=== Cross Bomb Attack ===");
+        System.out.println("Attacking: (" + attackRow + "," + attackCol + ")");
+
+        // Execute the cross bomb attack
+        String result = controller.playerCrossBombAttack(attackRow, attackCol);
+        System.out.println("Result: " + result);
+        addLog("CROSS BOMB at (" + attackRow + "," + attackCol + "): " + result);
+
+        // Manually mark all cells in the cross pattern on the attack board
+        int[][] crossPattern = {
+                {attackRow, attackCol},           // Center
+                {attackRow - 1, attackCol},       // Up
+                {attackRow + 1, attackCol},       // Down
+                {attackRow, attackCol - 1},       // Left
+                {attackRow, attackCol + 1}        // Right
+        };
+
+        // Mark each cell in the cross pattern
+        for (int[] pos : crossPattern) {
+            int r = pos[0];
+            int c = pos[1];
+
+            // Check if coordinates are within bounds
+            if (r >= 0 && r < 10 && c >= 0 && c < 10) {
+                // Check if the enemy board has a ship at this position
+                int[][] enemyBoardState = controller.getCurrentMatch().getMachine()
+                        .getOwnBoard().getBoardState();
+
+                boolean wasHit = (enemyBoardState[r][c] == 3); // 3 means hit
+
+                // Mark the attack on player's attack board
+                controller.getCurrentMatch().getPlayer().getAttackBoard()
+                        .markAttack(r, c, wasHit);
+
+                System.out.println("Marked cell (" + r + "," + c + ") as " + (wasHit ? "HIT" : "MISS"));
+            }
+        }
+
+        // Clean the selection
+        selectedRow = -1;
+        selectedCol = -1;
+        attackButton.setEnabled(false);
+        crossBombButton.setEnabled(false);
+
+        // Force board updates
+        updateBoards();
+        updateGameInfo();
+        updatePowerUpsDisplay();
+
+        // Force repaint of both boards
+        SwingUtilities.invokeLater(() -> {
+            playerBoard.repaint();
+            enemyBoard.repaint();
+            playerBoard.paintImmediately(playerBoard.getBounds());
+            enemyBoard.paintImmediately(enemyBoard.getBounds());
+        });
+
+        if (controller.isGameFinished()) {
+            showVictory();
+            return;
+        }
+
+        if (controller.isPlayerTurn()) {
+            statusLabel.setText("IMPACT! You can hit again");
+        } else {
+            executeMachineTurn();
+        }
+    }
+
     /**
      * Executes the player attack
      */
@@ -434,16 +616,17 @@ public class GameView extends JFrame {
         System.out.println("Result: " + result);
         addLog("You attacked (" + attackRow + "," + attackCol + "): " + result);
 
-        //Clean the selection
+        // Clean the selection
         selectedRow = -1;
         selectedCol = -1;
         attackButton.setEnabled(false);
+        crossBombButton.setEnabled(false);
 
         // Update status of the boards
         int[][] attackBoardState = controller.getPlayerAttackBoardState();
         System.out.println("State attackBoard[" + attackRow + "][" + attackCol + "] = " + attackBoardState[attackRow][attackCol]);
 
-        //
+        // Mark attack if not already marked
         if (attackBoardState[attackRow][attackCol] == 0 || attackBoardState[attackRow][attackCol] == 1) {
             System.err.println("ERROR: The attack was not marked!");
             // Manually mark the attack to keep consistency
@@ -452,11 +635,18 @@ public class GameView extends JFrame {
             System.out.println("Manual marking applied");
         }
 
+        // Force board updates
         updateBoards();
         updateGameInfo();
+        updatePowerUpsDisplay();
 
-        // Redraw boards
-        enemyBoard.repaint();
+        // Force repaint of both boards
+        SwingUtilities.invokeLater(() -> {
+            playerBoard.repaint();
+            enemyBoard.repaint();
+            playerBoard.paintImmediately(playerBoard.getBounds());
+            enemyBoard.paintImmediately(enemyBoard.getBounds());
+        });
 
         if (controller.isGameFinished()) {
             showVictory();
@@ -464,7 +654,7 @@ public class GameView extends JFrame {
         }
 
         if (controller.isPlayerTurn()) {
-            statusLabel.setText("¡IMPACT! You cant hit again");
+            statusLabel.setText("IMPACT! You can hit again");
         } else {
             executeMachineTurn();
         }
@@ -477,6 +667,7 @@ public class GameView extends JFrame {
         turnLabel.setText("Machine's turn...");
         statusLabel.setText("The machine is thinking...");
         attackButton.setEnabled(false);
+        crossBombButton.setEnabled(false);
 
         Timer timer = new Timer(800, null);
         timer.addActionListener(e -> {
@@ -500,9 +691,11 @@ public class GameView extends JFrame {
         timer.setRepeats(false);
         timer.start();
     }
-    /**Method to update the boards in the UI
+
+    /**
+     * Method to update the boards in the UI
      * Updates both player and enemy boards
-    * */
+     */
     private void updateBoards() {
         // Shows player's own ships and hits/misses in the enemy board
         playerBoard.updateBoard(controller.getPlayerOwnBoardState());
@@ -510,10 +703,11 @@ public class GameView extends JFrame {
         // Shows only hits and misses in the enemy board made by the player
         enemyBoard.updateBoard(controller.getPlayerAttackBoardState());
     }
+
     /**
      * Method to update game info labels
      * Updates the number of remaining ships for both players
-    * */
+     */
     private void updateGameInfo() {
         if (controller.getCurrentMatch() != null) {
             int playerShips = controller.getCurrentMatch().getPlayer()
@@ -537,9 +731,9 @@ public class GameView extends JFrame {
 
         int option = JOptionPane.showConfirmDialog(
                 this,
-                playerWon ? "¡You Won!\nPlay again?"
+                playerWon ? "You Won!\nPlay again?"
                         : "The Machine won\nPlay again?",
-                playerWon ? "¡VICTORY!" : "YOU LOSE",
+                playerWon ? "VICTORY!" : "YOU LOSE",
                 JOptionPane.YES_NO_OPTION,
                 JOptionPane.INFORMATION_MESSAGE
         );
@@ -550,6 +744,7 @@ public class GameView extends JFrame {
             System.exit(0);
         }
     }
+
     private void resetGame() {
         controller.resetGame();
         controller.startNewGame("Player", "password");
@@ -557,10 +752,12 @@ public class GameView extends JFrame {
         selectedRow = -1;
         selectedCol = -1;
         attackButton.setEnabled(false);
+        crossBombButton.setEnabled(false);
         logArea.setText("");
 
         updateBoards();
         updateGameInfo();
+        updatePowerUpsDisplay();
 
         turnLabel.setText("Your Turn - Select a cell to attack");
         statusLabel.setText("New game started");

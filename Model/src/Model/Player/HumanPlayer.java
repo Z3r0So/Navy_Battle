@@ -7,8 +7,10 @@ import Model.Board.Board;
 public class HumanPlayer extends Player{
     private int nextAttackRow = -1;
     private int nextAttackColumn = -1;
+    private PowerUpsManager powerUps;
     public HumanPlayer(String username, String password) {
         super(username, password);
+        this.powerUps = new PowerUpsManager();
     }
     /*Method to make an attack on the enemy board
      * @param enemyBoard the board of the enemy player
@@ -70,6 +72,9 @@ public class HumanPlayer extends Player{
     public void setNextAttack(int row, int column) {
         this.nextAttackRow = row;
         this.nextAttackColumn = column;
+    }
+    public PowerUpsManager getPowerUps() {
+        return powerUps;
     }
 
 

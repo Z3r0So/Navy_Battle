@@ -1,5 +1,6 @@
 package Model.Boat;
 
+import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -59,6 +60,23 @@ public class Boat {
             if (life == 0) {
                 isSunk = true;
             }
+        }
+    }
+    /**Method to get the color associated with the boat type
+     * @return Color object representing the boat's color
+    * */
+    public Color getColor() {
+        switch (type) {
+            case "Portaaviones": // Aircrafter
+                return new Color(128, 128, 128); // Gray
+            case "Cruise":
+                return new Color(0, 100, 150); // Dark Blue
+            case "Destructor":
+                return new Color(200, 100, 0); // Orange
+            case "Submarine":
+                return new Color(0, 150, 0); // Green
+            default:
+                return new Color(100, 126, 230); // Default blue
         }
     }
     // Method for verification of Sunking
