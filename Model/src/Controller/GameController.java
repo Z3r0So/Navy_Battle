@@ -184,35 +184,37 @@ public class GameController {
     }
 
     /**
-     * Verifica si es el turno del jugador humano
+     * The method checks if it's the player's turn
      */
     public boolean isPlayerTurn() {
         return currentMatch != null && currentMatch.isPlayerTurn();
     }
 
     /**
-     * Verifica si el juego ha terminado
+     * Verify if the game has finished
      */
     public boolean isGameFinished() {
         return currentMatch != null && currentMatch.isGameFinished();
     }
 
     /**
-     * Obtiene el ganador de la partida actual
+     * Obtains the winner of the game
+     * @return
      */
     public Player getWinner() {
         return currentMatch != null ? currentMatch.getWinner() : null;
     }
 
     /**
-     * Obtiene la partida actual
+     * Obtains the current match
+     * @return Current match
      */
     public Match getCurrentMatch() {
         return currentMatch;
     }
 
     /**
-     * Reinicia el juego completamente
+     * Restart the game, resetting both players' boards
      */
     public void resetGame() {
         if (currentMatch != null) {
@@ -223,8 +225,8 @@ public class GameController {
     }
 
     /**
-     * Obtiene el estado del tablero propio del jugador
-     * @return Matriz con el estado del tablero
+     * Obtains the state of the player's own board
+     * @return Matrix with the state of the board
      */
     public int[][] getPlayerOwnBoardState() {
         if (currentMatch == null) return new int[10][10];
@@ -232,8 +234,8 @@ public class GameController {
     }
 
     /**
-     * Obtiene el estado del tablero de ataques del jugador
-     * @return Matriz con el estado del tablero
+     * Obtains the state of the player's attack board (or enemy board)
+     * @return Matrix with the state of the attack board (or enemy board)
      */
     public int[][] getPlayerAttackBoardState() {
         if (currentMatch == null) return new int[10][10];
