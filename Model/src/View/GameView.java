@@ -7,10 +7,6 @@ import java.awt.event.*;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.RoundRectangle2D;
 
-/**
- * Interfaz gráfica principal del juego de Batalla Naval usando Swing
- * Estilo visual moderno con barcos circulares y colores vibrantes
- */
 public class GameView extends JFrame {
 
     private GameController controller;
