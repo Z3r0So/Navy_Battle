@@ -22,7 +22,7 @@ public class GameView extends JFrame {
     private static final Color SHIP_PLAYER_COLOR = new Color(100, 126, 230, 255);
     private static final Color SHIP_HIT_COLOR = new Color(230, 80, 80);
     private static final Color MISS_COLOR = new Color(110, 195, 227, 255);
-    private static final Color SELECTED_COLOR = new Color(7, 255, 226, 255);
+    private static final Color SELECTED_COLOR = new Color(255, 234, 7, 255);
 
     private BoardPanel playerBoard;
     private BoardPanel enemyBoard;
@@ -172,7 +172,9 @@ public class GameView extends JFrame {
 
         return section;
     }
-
+    /**Method to create the information panel on the right side
+     * Contains the game log
+    * */
     private JPanel createInfoPanel() {
         JPanel infoPanel = new JPanel(new BorderLayout(10, 10));
         infoPanel.setPreferredSize(new Dimension(250, 0));
@@ -197,7 +199,9 @@ public class GameView extends JFrame {
 
         return infoPanel;
     }
-
+    /**Method to create the action panel at the bottom
+     * Contains the status label, attack button and new game button
+    * */
     private JPanel createActionPanel() {
         JPanel actionPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 15));
         actionPanel.setBackground(new Color(0, 131, 143));
@@ -234,8 +238,11 @@ public class GameView extends JFrame {
 
         return actionPanel;
     }
-
-    private class BoardPanel extends JPanel {
+    /**
+     * Custom JPanel to represent a game board
+     * Handles rendering, clicks, and hover effects
+     */
+    public class BoardPanel extends JPanel {
         private boolean isPlayerBoard;
         private int[][] boardState;
         private Point hoveredCell = null;
@@ -273,10 +280,10 @@ public class GameView extends JFrame {
                 return;
             }
 
-            int col = x / CELL_SIZE;
+            int col = x / CELL_SIZE; //We divide by CELL_SIZE to get the coordinates of the cell
             int row = y / CELL_SIZE;
 
-            if (row >= 0 && row < GRID_SIZE && col >= 0 && col < GRID_SIZE) {
+            if (row >= 0 && row < GRID_SIZE && col >= 0 && col < GRID_SIZE) { // Verifies if the click is within the board
                 selectedRow = row;
                 selectedCol = col;
                 statusLabel.setText("Cell (" + row + "," + col + ") Selected - press ATTACK");
@@ -370,7 +377,12 @@ public class GameView extends JFrame {
                 }
             }
         }
-
+        /**Method to draw the content of each cell based on its state
+         * @param g2d the Graphics2D object for drawing
+         * @param x the x coordinate of the cell
+         * @param y the y coordinate of the cell
+         * @param state the state of the cell (0: empty, 1: ship, 2: miss, 3: hit)
+        * */
         private void drawCellContent(Graphics2D g2d, int x, int y, int state) {
             int centerX = x + CELL_SIZE / 2;
             int centerY = y + CELL_SIZE / 2;
@@ -406,7 +418,9 @@ public class GameView extends JFrame {
             }
         }
     }
-
+    /**
+     * Executes the player attack
+     */
     private void executeAttack() {
         if (selectedRow == -1 || selectedCol == -1) {
             return;
@@ -429,23 +443,23 @@ public class GameView extends JFrame {
         selectedCol = -1;
         attackButton.setEnabled(false);
 
-        // Actualizar tableros
+        // Update status of the boards
         int[][] attackBoardState = controller.getPlayerAttackBoardState();
-        System.out.println("Estado attackBoard[" + attackRow + "][" + attackCol + "] = " + attackBoardState[attackRow][attackCol]);
+        System.out.println("State attackBoard[" + attackRow + "][" + attackCol + "] = " + attackBoardState[attackRow][attackCol]);
 
-        // Verificar que se marcó correctamente
+        //
         if (attackBoardState[attackRow][attackCol] == 0 || attackBoardState[attackRow][attackCol] == 1) {
-            System.err.println("ERROR: El ataque NO se marcó en attackBoard!");
-            // Forzar marcado manual (workaround)
+            System.err.println("ERROR: The attack was not marked!");
+            // Manually mark the attack to keep consistency
             boolean wasHit = result.contains("Hit") || result.contains("Sunk");
             controller.getCurrentMatch().getPlayer().getAttackBoard().markAttack(attackRow, attackCol, wasHit);
-            System.out.println("Marcado manual aplicado");
+            System.out.println("Manual marking applied");
         }
 
         updateBoards();
         updateGameInfo();
 
-        // Forzar repaint
+        // Redraw boards
         enemyBoard.repaint();
 
         if (controller.isGameFinished()) {
@@ -454,24 +468,24 @@ public class GameView extends JFrame {
         }
 
         if (controller.isPlayerTurn()) {
-            statusLabel.setText("¡Impacto! Puedes atacar de nuevo");
+            statusLabel.setText("¡IMPACT! You cant hit again");
         } else {
             executeMachineTurn();
         }
     }
 
     /**
-     * Ejecuta el turno de la máquina
+     * Executes the machine turn
      */
     private void executeMachineTurn() {
-        turnLabel.setText("Turno de la máquina...");
-        statusLabel.setText("La máquina está atacando...");
+        turnLabel.setText("Machine's turn...");
+        statusLabel.setText("The machine is thinking...");
         attackButton.setEnabled(false);
 
         Timer timer = new Timer(800, null);
         timer.addActionListener(e -> {
             String result = controller.machineAttack();
-            addLog("🤖 Máquina atacó: " + result);
+            addLog("Machine attacked: " + result);
 
             updateBoards();
             updateGameInfo();
@@ -483,14 +497,16 @@ public class GameView extends JFrame {
             } else if (!controller.isPlayerTurn()) {
                 executeMachineTurn();
             } else {
-                turnLabel.setText("Tu turno - Selecciona una casilla para atacar");
-                statusLabel.setText("Es tu turno");
+                turnLabel.setText("Your turn - Select a cell to attack");
+                statusLabel.setText("Is your turn");
             }
         });
         timer.setRepeats(false);
         timer.start();
     }
-
+    /**Method to update the boards in the UI
+     * Updates both player and enemy boards
+    * */
     private void updateBoards() {
         // Shows player's own ships and hits/misses in the enemy board
         playerBoard.updateBoard(controller.getPlayerOwnBoardState());
@@ -498,7 +514,10 @@ public class GameView extends JFrame {
         // Shows only hits and misses in the enemy board made by the player
         enemyBoard.updateBoard(controller.getPlayerAttackBoardState());
     }
-
+    /**
+     * Method to update game info labels
+     * Updates the number of remaining ships for both players
+    * */
     private void updateGameInfo() {
         if (controller.getCurrentMatch() != null) {
             int playerShips = controller.getCurrentMatch().getPlayer()
@@ -518,7 +537,7 @@ public class GameView extends JFrame {
 
     private void showVictory() {
         String winner = controller.getWinner().getUsername();
-        boolean playerWon = winner.equals("Jugador");
+        boolean playerWon = winner.equals("Player");
 
         int option = JOptionPane.showConfirmDialog(
                 this,
@@ -535,7 +554,6 @@ public class GameView extends JFrame {
             System.exit(0);
         }
     }
-
     private void resetGame() {
         controller.resetGame();
         controller.startNewGame("Player", "password");
