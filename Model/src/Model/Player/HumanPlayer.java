@@ -28,7 +28,6 @@ public class HumanPlayer extends Player{
         // Verify if the coordinates are within bounds
         if (nextAttackRow < 0 || nextAttackRow >= enemyBoard.getRows() ||
                 nextAttackColumn < 0 || nextAttackColumn >= enemyBoard.getColumns()) {
-            // Limpiar coordenadas inválidas
             int invalidRow = nextAttackRow;
             int invalidCol = nextAttackColumn;
             nextAttackRow = -1;
@@ -42,7 +41,7 @@ public class HumanPlayer extends Player{
 
         // Verify if the position has already been attacked
         if (!enemyBoard.validShoot(nextAttackRow, nextAttackColumn)) {
-            // Limpiar coordenadas inválidas
+
             int invalidRow = nextAttackRow;
             int invalidCol = nextAttackColumn;
             nextAttackRow = -1;

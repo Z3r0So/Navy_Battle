@@ -54,10 +54,8 @@ public class Machine extends Player {
      * @return An array with the chosen attack coordinates [row, column].
     * */
      public int[] huntModeAttack(Board enemyBoard) {
-        // Buscar siguiente posición en patrón de damero (par/impar)
         for (int i = 0; i < 10; i++) {
             for (int j = 0; j < 10; j++) {
-                // Solo atacar casillas "blancas" del damero: (i+j) es par
                 if ((i + j) % 2 == 0 && enemyBoard.validShoot(i, j)) {
                     return new int[]{i, j};
                 }
@@ -158,13 +156,12 @@ public class Machine extends Player {
      * After a successful hit, this method adds the valid adjacent cells (up, down, left, right)
      * to the target stack for future attacks. It ensures that only valid and untried positions
      * are added, avoiding duplicates.
-     *
      * @param row The row of the last successful hit.
      * @param column The column of the last successful hit.
      * @param enemyBoard The board of the enemy player where the attack will be made.
     * */
     public  void addAdjacentTargets(int row, int column, Board enemyBoard) {
-        int[][] directions = {{-1,0}, {1,0}, {0,-1}, {0,1}}; // arriba, abajo, izq, der
+        int[][] directions = {{-1,0}, {1,0}, {0,-1}, {0,1}}; //
 
         for (int[] dir : directions) {
             int newRow = row + dir[0];
@@ -173,7 +170,6 @@ public class Machine extends Player {
             if (isValidCoordinate(newRow, newCol) &&
                     enemyBoard.validShoot(newRow, newCol)) {
 
-                // Evitar duplicados
                 if (!containsTarget(newRow, newCol)) {
                     targetStack.add(new int[]{newRow, newCol});
                 }

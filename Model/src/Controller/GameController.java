@@ -121,6 +121,22 @@ public class GameController {
             return "Invalid attack: " + e.getMessage();
         }
     }
+    public String playerCrossBombAttack(int row, int column) {
+        if (currentMatch == null || !currentMatch.isPlayerTurn() || currentMatch.isGameFinished()) {
+            return "Invalid state!";
+        }
+
+        HumanPlayer human = (HumanPlayer) currentMatch.getPlayer();
+
+        if (!human.getPowerUps().hasCrossBombs()) {
+            return "No cross bombs available!";
+        }
+
+        human.getPowerUps().useCrossBomb();
+
+        Attack attack = new Attacks.CrossBombAttack(row, column);
+        return currentMatch.executeAttack(attack, human, currentMatch.getMachine());
+    }
 
     /**
      * Executes the machine's attack
