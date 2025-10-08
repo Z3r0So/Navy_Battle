@@ -3,7 +3,7 @@ package Model.Player;
 import Attacks.Attack;
 import Model.Board.Board;
 
-public abstract class Player {
+public abstract class Player implements  IPlayer {
     private String Username;
     private int wins;
     private String password;
