@@ -1,6 +1,8 @@
 package Model.Player;
 
-public class PowerUpsManager {
+import Services.IShipPlacementService;
+
+public class PowerUpsManager implements IPowerUps {
         private int crossBombs;
         private int nukes;
         private int torpedoes;

@@ -1,20 +1,30 @@
 package Controller;
 
 import Attacks.Attack;
+import Attacks.CrossBombAttack;
+import Attacks.NukeAttack;
+import Attacks.TorpedoAttack;
 import Model.Boat.*;
 import Model.Match.Match;
 import Model.Player.HumanPlayer;
+import Services.IAttackService;
+import Services.AttackService;
 import Model.Player.Machine;
 import Model.Player.Player;
+import Services.IShipPlacementService;
+import Services.ShipPlacementService;
 
 import java.util.Random;
 
-public class GameController {
+public class GameController implements IGameController{
     private Match currentMatch;
     private Random random;
+    private final IAttackService attackService;
+    private final IShipPlacementService shipPlacementService;
 
     public GameController() {
-        this.random = new Random();
+        this.attackService = new AttackService();
+        this.shipPlacementService = new ShipPlacementService();
     }
 
     /**
@@ -30,9 +40,18 @@ public class GameController {
 
             currentMatch = new Match(humanPlayer, machinePlayer);
 
-            //Place ships automatically for both players
-            boolean playerShipsPlaced = placeShipsAutomatically(humanPlayer);
-            boolean machineShipsPlaced = placeShipsAutomatically(machinePlayer);
+
+            // Use ship placement service (S - Single Responsibility)
+            Boat[] fleet = createStandardFleet();
+            boolean playerShipsPlaced = shipPlacementService.placeFleetAutomatically(
+                    humanPlayer.getOwnBoard(), fleet
+            );
+
+            Boat[] machineFleet = createStandardFleet();
+            boolean machineShipsPlaced = shipPlacementService.placeFleetAutomatically(
+                    machinePlayer.getOwnBoard(), machineFleet
+            );
+
 
             if (!playerShipsPlaced || !machineShipsPlaced) {
                 currentMatch = null;
@@ -46,46 +65,22 @@ public class GameController {
         }
     }
 
-    /**
-     * Place ships automatically on the player's board
-     * @param player Player on whose board the ships will be placed
-     * @return true if all ships were placed successfully, false otherwise
+    /** Creates a standard fleet of boats
+     * @return Array of boats representing the standard fleet
      */
-    private boolean placeShipsAutomatically(Player player) {
-        Boat[] fleet = {
-                new Aircrafter(),
+    private Boat[] createStandardFleet() {
+        return new Boat[] {
                 new Aircrafter(),
                 new Cruise(),
                 new Cruise(),
-                new Destructor(),
                 new Destructor(),
                 new Destructor(),
                 new Submarine(),
                 new Submarine(),
                 new Submarine()
         };
-
-        for (Boat boat : fleet) {
-            boolean placed = false;
-            int attempts = 0;
-            int maxAttempts = 100;
-
-            while (!placed && attempts < maxAttempts) {
-                int row = random.nextInt(10);
-                int column = random.nextInt(10);
-                boolean horizontal = random.nextBoolean();
-
-                placed = player.getOwnBoard().placeShip(boat, row, column, horizontal);
-                attempts++;
-            }
-
-            if (!placed) {
-                return false;
-            }
-        }
-
-        return true;
     }
+
 
     /**
      * Executes the player's attack
@@ -94,37 +89,36 @@ public class GameController {
      * @return Result of the attack
      */
     public String playerAttack(int row, int column) {
-        if (currentMatch == null) {
+        if (!validateGameState()) {
             return "No game in progress!";
         }
-
-        if (!currentMatch.isPlayerTurn()) {
-            return "Not your turn!";
-        }
-
-        if (currentMatch.isGameFinished()) {
-            return "Game already finished!";
-        }
-
         try {
-
             HumanPlayer human = (HumanPlayer) currentMatch.getPlayer();
             human.setNextAttack(row, column);
 
             Attack attack = human.makeAttack(currentMatch.getMachine().getOwnBoard());
-            String result = currentMatch.executeAttack(attack,
+            String result = currentMatch.executeAttack(
+                    attack,
                     currentMatch.getPlayer(),
-                    currentMatch.getMachine());
-
+                    currentMatch.getMachine()
+            );
+            boolean wasHit = result.contains("Hit") || result.contains("Sunk");
+            attackService.markAttackOnBoard(
+                    human.getAttackBoard(),
+                    row,
+                    column,
+                    wasHit
+            );
             return result;
-
         } catch (IllegalArgumentException | IllegalStateException e) {
             return "Invalid attack: " + e.getMessage();
         }
+
     }
+    @Override
     public String playerCrossBombAttack(int row, int column) {
-        if (currentMatch == null || !currentMatch.isPlayerTurn() || currentMatch.isGameFinished()) {
-            return "Invalid state!";
+        if (!validateGameState()) {
+            return "Invalid game state!";
         }
 
         HumanPlayer human = (HumanPlayer) currentMatch.getPlayer();
@@ -135,8 +129,75 @@ public class GameController {
 
         human.getPowerUps().useCrossBomb();
 
-        Attack attack = new Attacks.CrossBombAttack(row, column);
-        return currentMatch.executeAttack(attack, human, currentMatch.getMachine());
+        Attack attack = new CrossBombAttack(row, column);
+        String result = currentMatch.executeAttack(attack, human, currentMatch.getMachine());
+
+        // Use attack service to mark pattern (S - Single Responsibility)
+        attackService.markCrossAttackPattern(
+                human.getAttackBoard(),
+                currentMatch.getMachine().getOwnBoard(),
+                row,
+                column
+        );
+
+        return result;
+    }
+    @Override
+    public String playerTorpedoAttack(int row, int column, boolean isHorizontal) {
+        if (!validateGameState()) {
+            return "Invalid game state!";
+        }
+        HumanPlayer human = (HumanPlayer) currentMatch.getPlayer();
+        if (!human.getPowerUps().hasTorpedoes()) {
+            return "No torpedoes available!";
+        }
+        human.getPowerUps().useTorpedo();
+        Attack attack = new TorpedoAttack(row, column, isHorizontal);
+        String result = currentMatch.executeAttack(attack, human, currentMatch.getMachine());
+
+        // Use attack service to mark pattern (S - Single Responsibility)
+        attackService.markTorpedoAttackPattern(
+                human.getAttackBoard(),
+                currentMatch.getMachine().getOwnBoard(),
+                row,
+                column,
+                isHorizontal
+        );
+
+        return result;
+
+    }
+    /** Method to execute a nuke attack
+     * @param row Row to attack
+     * @param column Column to attack
+     * @return Result of the attack
+    * */
+    @Override
+    public String playerNukeAttack(int row, int column) {
+        if (!validateGameState()) {
+            return "Invalid game state!";
+        }
+
+        HumanPlayer human = (HumanPlayer) currentMatch.getPlayer();
+
+        if (!human.getPowerUps().hasNukes()) {
+            return "No nukes available!";
+        }
+
+        human.getPowerUps().useNuke();
+
+        Attack attack = new NukeAttack(row, column);
+        String result = currentMatch.executeAttack(attack, human, currentMatch.getMachine());
+
+        // Use attack service to mark pattern (S - Single Responsibility)
+        attackService.markNukeAttackPattern(
+                human.getAttackBoard(),
+                currentMatch.getMachine().getOwnBoard(),
+                row,
+                column
+        );
+
+        return result;
     }
 
     /**
@@ -184,6 +245,7 @@ public class GameController {
      * @param horizontal True if the boat is placed horizontally, false if vertically
      * @return true if the ship was placed successfully, false otherwise
      */
+    @Override
     public boolean placePlayerShip(Boat boat, int row, int column, boolean horizontal) {
         if (currentMatch == null) {
             return false;
@@ -192,8 +254,9 @@ public class GameController {
     }
 
     /**
-     * Reinicia los tableros del jugador (útil para recolocar barcos)
+     * Resets the player's own board
      */
+    @Override
     public void resetPlayerBoard() {
         if (currentMatch != null) {
             currentMatch.getPlayer().getOwnBoard().initialize();
@@ -203,6 +266,7 @@ public class GameController {
     /**
      * The method checks if it's the player's turn
      */
+    @Override
     public boolean isPlayerTurn() {
         return currentMatch != null && currentMatch.isPlayerTurn();
     }
@@ -210,6 +274,7 @@ public class GameController {
     /**
      * Verify if the game has finished
      */
+    @Override
     public boolean isGameFinished() {
         return currentMatch != null && currentMatch.isGameFinished();
     }
@@ -218,6 +283,7 @@ public class GameController {
      * Obtains the winner of the game
      * @return
      */
+    @Override
     public Player getWinner() {
         return currentMatch != null ? currentMatch.getWinner() : null;
     }
@@ -226,6 +292,7 @@ public class GameController {
      * Obtains the current match
      * @return Current match
      */
+    @Override
     public Match getCurrentMatch() {
         return currentMatch;
     }
@@ -233,6 +300,7 @@ public class GameController {
     /**
      * Restart the game, resetting both players' boards
      */
+    @Override
     public void resetGame() {
         if (currentMatch != null) {
             currentMatch.getPlayer().resetBoards();
@@ -245,6 +313,7 @@ public class GameController {
      * Obtains the state of the player's own board
      * @return Matrix with the state of the board
      */
+    @Override
     public int[][] getPlayerOwnBoardState() {
         if (currentMatch == null) return new int[10][10];
         return currentMatch.getPlayer().getOwnBoard().getBoardState();
@@ -254,8 +323,18 @@ public class GameController {
      * Obtains the state of the player's attack board (or enemy board)
      * @return Matrix with the state of the attack board (or enemy board)
      */
+    @Override
     public int[][] getPlayerAttackBoardState() {
         if (currentMatch == null) return new int[10][10];
         return currentMatch.getPlayer().getAttackBoard().getBoardState();
+    }
+    /**
+     * Helper method to validate game state
+     * S - Single Responsibility: Validation logic separated
+     */
+    private boolean validateGameState() {
+        return currentMatch != null &&
+                currentMatch.isPlayerTurn() &&
+                !currentMatch.isGameFinished();
     }
 }

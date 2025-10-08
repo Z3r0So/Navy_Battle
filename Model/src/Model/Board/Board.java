@@ -2,17 +2,22 @@ package Model.Board;
 
 import Model.Boat.Boat;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Board {
+public class Board implements IBoardOperations{
     private final int rows;
     private final int columns;
     private final int[][] board; // 0=vacio, 1=barco, 2=agua, 3=impacto
     private Boat[][] boatGrid; //Tracking of boat position
     private List<Boat> boatList; // All the boats that are going to be used in the game
 
-    //Creation of constructor for the board
+    /**Constructor of the board
+     *
+     * @int rows is the number of rows of the board
+     * @int columns is the number of columns of the board
+    * */
     public Board(int rows, int columns) {
         this.rows = rows;
         this.columns = columns;
@@ -22,7 +27,14 @@ public class Board {
         initialize();
     }
 
-    //Initialize the board by filling it with 0 (0 means that it is empty)
+    /**Method to initialize the board
+     * This method will set all the values of the board to 0 (empty)
+     0 = empty
+     1 = occupied by a boat
+     2 = missed shot (water)
+     3 = hit shot (impact)
+     4 = sunk boat (not used in the board, but can be useful for future
+    * */
     public void initialize() {
         for (int i = 0; i < rows; i++) {
             for (int j = 0; j < columns; j++) {
@@ -32,7 +44,11 @@ public class Board {
         }
         boatList.clear();
     }
-
+    /**Method to mark an attack on the board
+     * @int row is the row where the attack was made
+     * @int column is the column where the attack was made
+     * @boolean hit is true if the attack was a hit, false if it was a miss
+    * */
     public void markAttack(int row, int column, boolean hit) {
         if (row >= 0 && row < rows && column >= 0 && column < columns) {
             if (hit) {
@@ -104,7 +120,7 @@ public class Board {
         if (!boatList.contains(boat)) {
             return false;
         }
-        // Remove the boat from the board
+        //Remove the boat from the board
         for (int[] pos : boat.getPositions()) {
             int row = pos[0];
             int col = pos[1];
