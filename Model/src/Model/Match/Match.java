@@ -85,7 +85,6 @@ public class Match {
         }
     }
 
-
     public Player getPlayer() {
         return player;
     }
