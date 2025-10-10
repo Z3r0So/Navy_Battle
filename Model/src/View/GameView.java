@@ -1,7 +1,8 @@
 package View;
 
-import Controller.IGameController;
 import Controller.GameController;
+import Controller.Interfaces.IAttackController;
+import Controller.Interfaces.ITurnController;
 import Model.Boat.Boat;
 import Model.Player.HumanPlayer;
 import View.Components.*;
@@ -14,7 +15,7 @@ import java.awt.*;
 public class GameView extends JFrame {
 
     //Controller
-    private final IGameController controller;
+    private final IAttackController controller;
 
     //Components
     private HeaderPanel headerPanel;
@@ -146,7 +147,7 @@ public class GameView extends JFrame {
     private void setupListeners() {
         // Enemy board click listener
         enemyBoard.setOnCellClickListener((row, col) -> {
-            if (controller.isGameFinished() || !controller.isPlayerTurn()) {
+            if (controller.isGameFinished() || !ITurnController.isPlayerTurn()) {
                 return;
             }
 

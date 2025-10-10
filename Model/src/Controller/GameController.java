@@ -4,6 +4,10 @@ import Attacks.Attack;
 import Attacks.CrossBombAttack;
 import Attacks.NukeAttack;
 import Attacks.TorpedoAttack;
+import Controller.Interfaces.IAttackController;
+import Controller.Interfaces.IBoardController;
+import Controller.Interfaces.IGameLifecycle;
+import Controller.Interfaces.ITurnController;
 import Model.Boat.*;
 import Model.Match.Match;
 import Model.Player.HumanPlayer;
@@ -16,7 +20,10 @@ import Services.ShipPlacementService;
 
 import java.util.Random;
 
-public class GameController implements IGameController{
+public class GameController implements IGameLifecycle,
+        IAttackController,
+        IBoardController,
+        ITurnController {
     private Match currentMatch;
     private Random random;
     private final IAttackService attackService;
