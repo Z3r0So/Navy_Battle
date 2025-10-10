@@ -78,8 +78,10 @@ public class GameController implements IGameLifecycle,
     private Boat[] createStandardFleet() {
         return new Boat[] {
                 new Aircrafter(),
+                new Aircrafter(),
                 new Cruise(),
                 new Cruise(),
+                new Destructor(),
                 new Destructor(),
                 new Destructor(),
                 new Submarine(),
