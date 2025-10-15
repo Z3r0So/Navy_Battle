@@ -1,6 +1,7 @@
 package View;
 
 import Controller.Interfaces.*;
+import Database.PlayerDAO;
 import Model.Boat.Boat;
 import Model.Player.HumanPlayer;
 import View.Components.*;
@@ -9,18 +10,19 @@ import javax.swing.*;
 import java.awt.*;
 
 /**
- * GameView - View.Main Frame (Refactored with SOLID principles)
+ * GameView - Main Frame (ACTUALIZADO con integración de base de datos)
  *
  * Responsibilities:
  * - Coordinate visual components
  * - Delegate actions to appropriate controllers
  * - Update UI based on game state
- *
- * Follows SRP: Only manages UI coordination
- * Follows DIP: Depends on controller interfaces, not implementations
- * Follows ISP: Uses segregated controller interfaces
+ * - Update player wins in database
  */
 public class GameView extends JFrame implements IGameView {
+
+    // NUEVO: Información del jugador y DAO
+    private final String playerName;
+    private final PlayerDAO playerDAO;
 
     // Controller dependencies (DIP - depend on abstractions)
     private final IAttackController attackController;
@@ -42,20 +44,23 @@ public class GameView extends JFrame implements IGameView {
     private int selectedCol = -1;
 
     /**
-     * Constructor with dependency injection
-     * Follows DIP: Receives interfaces, not concrete implementations
+     * Constructor with dependency injection Y NOMBRE DE JUGADOR
      *
+     * @param playerName Nombre del jugador (desde login)
      * @param attackController Controller for attack operations
      * @param turnController Controller for turn management
      * @param gameLifecycle Controller for game lifecycle
      * @param boardController Controller for board operations
      */
     public GameView(
+            String playerName,
             IAttackController attackController,
             ITurnController turnController,
             IGameLifecycle gameLifecycle,
             IBoardController boardController
     ) {
+        this.playerName = playerName;
+        this.playerDAO = new PlayerDAO();
         this.attackController = attackController;
         this.turnController = turnController;
         this.gameLifecycle = gameLifecycle;
@@ -69,19 +74,19 @@ public class GameView extends JFrame implements IGameView {
 
     /**
      * Initialize game state through lifecycle controller
+     * AHORA USA EL NOMBRE DEL JUGADOR REAL
      */
     private void initializeGame() {
-        if (!gameLifecycle.startNewGame("Player", "password")) {
+        if (!gameLifecycle.startNewGame(playerName, "default")) {
             showErrorAndExit("Couldn't start a new game");
         }
     }
 
     /**
      * Initialize all UI components
-     * Follows SRP: Delegates to component creation methods
      */
     private void initComponents() {
-        setTitle("Navy Battle - SOLID Edition");
+        setTitle("Navy Battle - " + playerName); // ACTUALIZADO con nombre del jugador
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout(10, 10));
         setResizable(false);
@@ -89,6 +94,7 @@ public class GameView extends JFrame implements IGameView {
 
         // Create all panels
         headerPanel = new HeaderPanel();
+        headerPanel.setTitle("Navy Battle - " + playerName); // ACTUALIZADO
         infoPanel = new InfoPanel();
         actionPanel = new ActionPanel();
         JPanel boardsPanel = createBoardsPanel();
@@ -186,7 +192,6 @@ public class GameView extends JFrame implements IGameView {
 
     /**
      * Setup all event listeners
-     * Follows SRP: Delegates to specific handler methods
      */
     private void setupListeners() {
         // Enemy board cell selection
@@ -215,7 +220,6 @@ public class GameView extends JFrame implements IGameView {
 
     /**
      * Handle attack action from action panel
-     * Follows OCP: New attack types can be added without modifying this method
      */
     private void handleAttackAction(ActionPanel.AttackType attackType) {
         switch (attackType) {
@@ -397,7 +401,12 @@ public class GameView extends JFrame implements IGameView {
 
     @Override
     public void showVictory(String winner) {
-        boolean playerWon = winner.equals("Player");
+        boolean playerWon = winner.equals(playerName); // ACTUALIZADO para usar nombre real
+
+        // NUEVO: Si el jugador ganó, actualizar la base de datos
+        if (playerWon) {
+            updatePlayerWinsInDatabase();
+        }
 
         int option = JOptionPane.showConfirmDialog(
                 this,
@@ -410,8 +419,33 @@ public class GameView extends JFrame implements IGameView {
         if (option == JOptionPane.YES_OPTION) {
             resetView();
         } else {
-            System.exit(0);
+            backToLogin();
         }
+    }
+
+    /**
+     * NUEVO: Actualiza las victorias del jugador en la base de datos
+     */
+    private void updatePlayerWinsInDatabase() {
+        boolean success = playerDAO.incrementWins(playerName);
+
+        if (success) {
+            int totalWins = playerDAO.getPlayerWins(playerName);
+            infoPanel.addLog("🏆 Victory recorded! Total wins: " + totalWins);
+        } else {
+            System.err.println("Error updating player wins in database");
+        }
+    }
+
+    /**
+     * NUEVO: Vuelve a la pantalla de login
+     */
+    private void backToLogin() {
+        dispose();
+        SwingUtilities.invokeLater(() -> {
+            LoginView loginView = new LoginView();
+            loginView.setVisible(true);
+        });
     }
 
     @Override
@@ -426,7 +460,7 @@ public class GameView extends JFrame implements IGameView {
     @Override
     public void resetView() {
         gameLifecycle.resetGame();
-        gameLifecycle.startNewGame("Player", "password");
+        gameLifecycle.startNewGame(playerName, "default"); // USA NOMBRE REAL
 
         clearSelection();
         playerBoard.clearSelection();
@@ -435,7 +469,7 @@ public class GameView extends JFrame implements IGameView {
         headerPanel.setTurnMessage("Your turn - Select a cell to attack");
 
         infoPanel.clearLog();
-        infoPanel.addLog("⚔️ New game started!");
+        infoPanel.addLog("⚔️ New game started for " + playerName + "!");
 
         updateAllComponents();
         enemyBoard.setInteractive(true);
