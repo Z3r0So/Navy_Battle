@@ -1,4 +1,4 @@
-package Model.Player;
+package Model.Player.Interfaces;
 
 public interface IPowerUps {
     boolean hasCrossBombs();

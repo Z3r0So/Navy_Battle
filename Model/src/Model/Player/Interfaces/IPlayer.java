@@ -1,4 +1,4 @@
-package Model.Player;
+package Model.Player.Interfaces;
 import Attacks.Attack;
 import Model.Board.Board;
 public interface IPlayer {

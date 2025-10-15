@@ -4,126 +4,168 @@ import Attacks.Attack;
 import Attacks.CrossBombAttack;
 import Attacks.NukeAttack;
 import Attacks.TorpedoAttack;
-import Controller.Interfaces.IAttackController;
-import Controller.Interfaces.IBoardController;
-import Controller.Interfaces.IGameLifecycle;
-import Controller.Interfaces.ITurnController;
+import Controller.Interfaces.*;
 import Model.Boat.*;
 import Model.Match.Match;
 import Model.Player.HumanPlayer;
-import Services.IAttackService;
-import Services.AttackService;
+import Model.Player.Interfaces.IPlayerCreator;
+import Services.*;
 import Model.Player.Machine;
 import Model.Player.Player;
-import Services.IShipPlacementService;
-import Services.ShipPlacementService;
 
 import java.util.Random;
 
-public class GameController implements IGameLifecycle,
+public class GameController implements
+        IGameLifecycle,
         IAttackController,
         IBoardController,
         ITurnController {
-    private Match currentMatch;
-    private Random random;
-    private final IAttackService attackService;
-    private final IShipPlacementService shipPlacementService;
 
-    public GameController() {
-        this.attackService = new AttackService();
-        this.shipPlacementService = new ShipPlacementService();
-    }
+    private Match currentMatch;
+
+    // Injected dependencies (DIP)
+    private final IPlayerCreator playerCreator;
+    private final IFleetManager fleetManager;
+    private final IAttackExecutor attackExecutor;
+    private final IAttackService attackService;
 
     /**
-     * Start a new game with a human player and a machine player
+     * Constructor with full dependency injection
+     * Allows complete control over dependencies for testing
+     *
+     * @param playerCreator Factory for creating players
+     * @param fleetManager Manager for fleet operations
+     * @param attackExecutor Executor for attack operations
+     * @param attackService Service for marking attacks
+     */
+    public GameController(
+            IPlayerCreator playerCreator,
+            IFleetManager fleetManager,
+            IAttackExecutor attackExecutor,
+            IAttackService attackService
+    ) {
+        this.playerCreator = playerCreator;
+        this.fleetManager = fleetManager;
+        this.attackExecutor = attackExecutor;
+        this.attackService = attackService;
+    }
+
+    // ==================== IGameLifecycle Implementation ====================
+
+    /**
+     * Starts a new game between human and machine
+     * Delegates creation and setup to injected dependencies
+     *
      * @param playerName Name of the human player
      * @param password Password of the human player
-     * @return true if the game started successfully, false otherwise
+     * @return true if game started successfully, false otherwise
      */
+    @Override
     public boolean startNewGame(String playerName, String password) {
         try {
-            Player humanPlayer = new HumanPlayer(playerName, password);
-            Player machinePlayer = new Machine();
+            // Use player creator (DIP)
+            Player humanPlayer = playerCreator.createHumanPlayer(playerName, password);
+            Player machinePlayer = playerCreator.createMachinePlayer();
 
+            // Create match
             currentMatch = new Match(humanPlayer, machinePlayer);
 
+            // Create and deploy fleets using fleet manager (SRP)
+            Boat[] playerFleet = fleetManager.createStandardFleet();
+            Boat[] machineFleet = fleetManager.createStandardFleet();
 
-            // Use ship placement service (S - Single Responsibility)
-            Boat[] fleet = createStandardFleet();
-            boolean playerShipsPlaced = shipPlacementService.placeFleetAutomatically(
-                    humanPlayer.getOwnBoard(), fleet
+            boolean playerShipsPlaced = fleetManager.deployFleet(
+                    humanPlayer.getOwnBoard(),
+                    playerFleet
             );
 
-            Boat[] machineFleet = createStandardFleet();
-            boolean machineShipsPlaced = shipPlacementService.placeFleetAutomatically(
-                    machinePlayer.getOwnBoard(), machineFleet
+            boolean machineShipsPlaced = fleetManager.deployFleet(
+                    machinePlayer.getOwnBoard(),
+                    machineFleet
             );
 
-
+            // Validate deployment
             if (!playerShipsPlaced || !machineShipsPlaced) {
                 currentMatch = null;
                 return false;
             }
 
             return true;
+
         } catch (Exception e) {
             currentMatch = null;
             return false;
         }
     }
 
-    /** Creates a standard fleet of boats
-     * @return Array of boats representing the standard fleet
-     */
-    private Boat[] createStandardFleet() {
-        return new Boat[] {
-                new Aircrafter(),
-                new Aircrafter(),
-                new Cruise(),
-                new Cruise(),
-                new Destructor(),
-                new Destructor(),
-                new Destructor(),
-                new Submarine(),
-                new Submarine(),
-                new Submarine()
-        };
+    @Override
+    public void resetGame() {
+        if (currentMatch != null) {
+            currentMatch.getPlayer().resetBoards();
+            currentMatch.getMachine().resetBoards();
+        }
+        currentMatch = null;
     }
 
+    @Override
+    public boolean isGameFinished() {
+        return currentMatch != null && currentMatch.isGameFinished();
+    }
+
+    @Override
+    public Player getWinner() {
+        return currentMatch != null ? currentMatch.getWinner() : null;
+    }
+
+    @Override
+    public Match getCurrentMatch() {
+        return currentMatch;
+    }
+
+    // ==================== IAttackController Implementation ====================
 
     /**
-     * Executes the player's attack
+     * Executes a basic player attack
+     * Delegates to attack executor (SRP)
+     *
      * @param row Row to attack
      * @param column Column to attack
-     * @return Result of the attack
+     * @return Result message of the attack
      */
+    @Override
     public String playerAttack(int row, int column) {
         if (!validateGameState()) {
             return "No game in progress!";
         }
+
         try {
             HumanPlayer human = (HumanPlayer) currentMatch.getPlayer();
             human.setNextAttack(row, column);
 
             Attack attack = human.makeAttack(currentMatch.getMachine().getOwnBoard());
-            String result = currentMatch.executeAttack(
+
+            // Use attack executor (SRP + DIP)
+            AttackResult result = attackExecutor.executeAttack(
+                    currentMatch,
                     attack,
                     currentMatch.getPlayer(),
                     currentMatch.getMachine()
             );
-            boolean wasHit = result.contains("Hit") || result.contains("Sunk");
-            attackService.markAttackOnBoard(
-                    human.getAttackBoard(),
-                    row,
-                    column,
-                    wasHit
-            );
-            return result;
+
+            return result.getMessage();
+
         } catch (IllegalArgumentException | IllegalStateException e) {
             return "Invalid attack: " + e.getMessage();
         }
-
     }
+
+    /**
+     * Executes a cross bomb attack
+     *
+     * @param row Center row of the cross
+     * @param column Center column of the cross
+     * @return Result message of the attack
+     */
     @Override
     public String playerCrossBombAttack(int row, int column) {
         if (!validateGameState()) {
@@ -136,12 +178,19 @@ public class GameController implements IGameLifecycle,
             return "No cross bombs available!";
         }
 
+        // Use power-up
         human.getPowerUps().useCrossBomb();
 
+        // Create and execute attack
         Attack attack = new CrossBombAttack(row, column);
-        String result = currentMatch.executeAttack(attack, human, currentMatch.getMachine());
+        AttackResult result = attackExecutor.executeAttack(
+                currentMatch,
+                attack,
+                human,
+                currentMatch.getMachine()
+        );
 
-        // Use attack service to mark pattern (S - Single Responsibility)
+        // Mark pattern on attack board (delegates to service)
         attackService.markCrossAttackPattern(
                 human.getAttackBoard(),
                 currentMatch.getMachine().getOwnBoard(),
@@ -149,22 +198,42 @@ public class GameController implements IGameLifecycle,
                 column
         );
 
-        return result;
+        return result.getMessage();
     }
+
+    /**
+     * Executes a torpedo attack (entire row or column)
+     *
+     * @param row Row coordinate
+     * @param column Column coordinate
+     * @param isHorizontal true for row attack, false for column attack
+     * @return Result message of the attack
+     */
     @Override
     public String playerTorpedoAttack(int row, int column, boolean isHorizontal) {
         if (!validateGameState()) {
             return "Invalid game state!";
         }
+
         HumanPlayer human = (HumanPlayer) currentMatch.getPlayer();
+
         if (!human.getPowerUps().hasTorpedoes()) {
             return "No torpedoes available!";
         }
-        human.getPowerUps().useTorpedo();
-        Attack attack = new TorpedoAttack(row, column, isHorizontal);
-        String result = currentMatch.executeAttack(attack, human, currentMatch.getMachine());
 
-        // Use attack service to mark pattern (S - Single Responsibility)
+        // Use power-up
+        human.getPowerUps().useTorpedo();
+
+        // Create and execute attack
+        Attack attack = new TorpedoAttack(row, column, isHorizontal);
+        AttackResult result = attackExecutor.executeAttack(
+                currentMatch,
+                attack,
+                human,
+                currentMatch.getMachine()
+        );
+
+        // Mark pattern on attack board
         attackService.markTorpedoAttackPattern(
                 human.getAttackBoard(),
                 currentMatch.getMachine().getOwnBoard(),
@@ -173,14 +242,16 @@ public class GameController implements IGameLifecycle,
                 isHorizontal
         );
 
-        return result;
-
+        return result.getMessage();
     }
-    /** Method to execute a nuke attack
-     * @param row Row to attack
-     * @param column Column to attack
-     * @return Result of the attack
-    * */
+
+    /**
+     * Executes a nuke attack (3x3 area)
+     *
+     * @param row Center row of the nuke
+     * @param column Center column of the nuke
+     * @return Result message of the attack
+     */
     @Override
     public String playerNukeAttack(int row, int column) {
         if (!validateGameState()) {
@@ -193,12 +264,19 @@ public class GameController implements IGameLifecycle,
             return "No nukes available!";
         }
 
+        // Use power-up
         human.getPowerUps().useNuke();
 
+        // Create and execute attack
         Attack attack = new NukeAttack(row, column);
-        String result = currentMatch.executeAttack(attack, human, currentMatch.getMachine());
+        AttackResult result = attackExecutor.executeAttack(
+                currentMatch,
+                attack,
+                human,
+                currentMatch.getMachine()
+        );
 
-        // Use attack service to mark pattern (S - Single Responsibility)
+        // Mark pattern on attack board
         attackService.markNukeAttackPattern(
                 human.getAttackBoard(),
                 currentMatch.getMachine().getOwnBoard(),
@@ -206,13 +284,16 @@ public class GameController implements IGameLifecycle,
                 column
         );
 
-        return result;
+        return result.getMessage();
     }
 
     /**
      * Executes the machine's attack
-     * @return Result of the attack
+     * Delegates to attack executor (SRP)
+     *
+     * @return Result message of the attack
      */
+    @Override
     public String machineAttack() {
         if (currentMatch == null) {
             return "No game in progress!";
@@ -227,32 +308,25 @@ public class GameController implements IGameLifecycle,
         }
 
         try {
-            Machine machine = (Machine) currentMatch.getMachine();
-
-            Attack attack = machine.makeAttack(currentMatch.getPlayer().getOwnBoard());
-            String result = currentMatch.executeAttack(attack,
-                    currentMatch.getMachine(),
-                    currentMatch.getPlayer());
-            // Notify the machine of the attack result for learning purposes of AI
-            machine.notifyAttackResult(attack.getRow(),
-                    attack.getColumn(),
-                    result,
-                    currentMatch.getPlayer().getOwnBoard());
-
-            return result;
+            // Use attack executor for machine attack (SRP + DIP)
+            AttackResult result = attackExecutor.executeMachineAttack(currentMatch);
+            return result.getMessage();
 
         } catch (Exception e) {
             return "Machine attack error: " + e.getMessage();
         }
     }
 
+    // ==================== IBoardController Implementation ====================
+
     /**
-     *Places a ship for the player at the specified position
+     * Places a ship for the player at the specified position
+     *
      * @param boat Boat to place
      * @param row Starting row
      * @param column Starting column
-     * @param horizontal True if the boat is placed horizontally, false if vertically
-     * @return true if the ship was placed successfully, false otherwise
+     * @param horizontal True if horizontal, false if vertical
+     * @return true if placed successfully, false otherwise
      */
     @Override
     public boolean placePlayerShip(Boat boat, int row, int column, boolean horizontal) {
@@ -273,77 +347,54 @@ public class GameController implements IGameLifecycle,
     }
 
     /**
-     * The method checks if it's the player's turn
+     * Gets the state of the player's own board
+     *
+     * @return 2D array representing board state
+     */
+    @Override
+    public int[][] getPlayerOwnBoardState() {
+        if (currentMatch == null) {
+            return new int[10][10];
+        }
+        return currentMatch.getPlayer().getOwnBoard().getBoardState();
+    }
+
+    /**
+     * Gets the state of the player's attack board (tracking enemy hits)
+     *
+     * @return 2D array representing attack board state
+     */
+    @Override
+    public int[][] getPlayerAttackBoardState() {
+        if (currentMatch == null) {
+            return new int[10][10];
+        }
+        return currentMatch.getPlayer().getAttackBoard().getBoardState();
+    }
+
+    // ==================== ITurnController Implementation ====================
+
+    /**
+     * Checks if it's the player's turn
+     *
+     * @return true if player's turn, false otherwise
      */
     @Override
     public boolean isPlayerTurn() {
         return currentMatch != null && currentMatch.isPlayerTurn();
     }
 
-    /**
-     * Verify if the game has finished
-     */
-    @Override
-    public boolean isGameFinished() {
-        return currentMatch != null && currentMatch.isGameFinished();
-    }
+    // ==================== Private Helper Methods ====================
 
     /**
-     * Obtains the winner of the game
-     * @return
-     */
-    @Override
-    public Player getWinner() {
-        return currentMatch != null ? currentMatch.getWinner() : null;
-    }
-
-    /**
-     * Obtains the current match
-     * @return Current match
-     */
-    @Override
-    public Match getCurrentMatch() {
-        return currentMatch;
-    }
-
-    /**
-     * Restart the game, resetting both players' boards
-     */
-    @Override
-    public void resetGame() {
-        if (currentMatch != null) {
-            currentMatch.getPlayer().resetBoards();
-            currentMatch.getMachine().resetBoards();
-        }
-        currentMatch = null;
-    }
-
-    /**
-     * Obtains the state of the player's own board
-     * @return Matrix with the state of the board
-     */
-    @Override
-    public int[][] getPlayerOwnBoardState() {
-        if (currentMatch == null) return new int[10][10];
-        return currentMatch.getPlayer().getOwnBoard().getBoardState();
-    }
-
-    /**
-     * Obtains the state of the player's attack board (or enemy board)
-     * @return Matrix with the state of the attack board (or enemy board)
-     */
-    @Override
-    public int[][] getPlayerAttackBoardState() {
-        if (currentMatch == null) return new int[10][10];
-        return currentMatch.getPlayer().getAttackBoard().getBoardState();
-    }
-    /**
-     * Helper method to validate game state
-     * S - Single Responsibility: Validation logic separated
+     * Validates that game is in a valid state for player actions
+     * Extracted to separate method (SRP)
+     *
+     * @return true if game is valid for actions, false otherwise
      */
     private boolean validateGameState() {
-        return currentMatch != null &&
-                currentMatch.isPlayerTurn() &&
-                !currentMatch.isGameFinished();
+        return currentMatch != null
+                && currentMatch.isPlayerTurn()
+                && !currentMatch.isGameFinished();
     }
-}
+        }

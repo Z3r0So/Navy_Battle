@@ -10,7 +10,7 @@ import java.util.Random;
 public class Machine extends Player {
     private Random random;
 
-    private boolean targetMode;              // false = Hunt, true = Target
+    private boolean targetMode; // false = Hunt, true = Target
     private List<int[]> targetStack;
     private List<int[]> hitHistory;
 
