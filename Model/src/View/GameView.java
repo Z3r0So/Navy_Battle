@@ -20,17 +20,16 @@ import java.awt.*;
  */
 public class GameView extends JFrame implements IGameView {
 
-    // NUEVO: Información del jugador y DAO
+
     private final String playerName;
     private final PlayerDAO playerDAO;
 
-    // Controller dependencies (DIP - depend on abstractions)
     private final IAttackController attackController;
     private final ITurnController turnController;
     private final IGameLifecycle gameLifecycle;
     private final IBoardController boardController;
 
-    // UI Components (SRP - each has single responsibility)
+
     private HeaderPanel headerPanel;
     private BoardPanel playerBoard;
     private BoardPanel enemyBoard;
@@ -39,14 +38,14 @@ public class GameView extends JFrame implements IGameView {
     private JLabel playerShipsLabel;
     private JLabel enemyShipsLabel;
 
-    // Selection state (managed by view coordinator)
+
     private int selectedRow = -1;
     private int selectedCol = -1;
 
     /**
      * Constructor with dependency injection Y NOMBRE DE JUGADOR
      *
-     * @param playerName Nombre del jugador (desde login)
+     * @param playerName name of the human player
      * @param attackController Controller for attack operations
      * @param turnController Controller for turn management
      * @param gameLifecycle Controller for game lifecycle
@@ -74,7 +73,6 @@ public class GameView extends JFrame implements IGameView {
 
     /**
      * Initialize game state through lifecycle controller
-     * AHORA USA EL NOMBRE DEL JUGADOR REAL
      */
     private void initializeGame() {
         if (!gameLifecycle.startNewGame(playerName, "default")) {
@@ -86,7 +84,7 @@ public class GameView extends JFrame implements IGameView {
      * Initialize all UI components
      */
     private void initComponents() {
-        setTitle("Navy Battle - " + playerName); // ACTUALIZADO con nombre del jugador
+        setTitle("Navy Battle - " + playerName);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout(10, 10));
         setResizable(false);
@@ -94,7 +92,7 @@ public class GameView extends JFrame implements IGameView {
 
         // Create all panels
         headerPanel = new HeaderPanel();
-        headerPanel.setTitle("Navy Battle - " + playerName); // ACTUALIZADO
+        headerPanel.setTitle("Navy Battle - " + playerName);
         infoPanel = new InfoPanel();
         actionPanel = new ActionPanel();
         JPanel boardsPanel = createBoardsPanel();
@@ -232,13 +230,11 @@ public class GameView extends JFrame implements IGameView {
         }
     }
 
-    // ==================== Attack Execution Methods ====================
-
     private void executeBasicAttack() {
         if (!isValidSelection()) return;
 
         String result = attackController.playerAttack(selectedRow, selectedCol);
-        infoPanel.addLog("⚔️ ATTACK (" + selectedRow + "," + selectedCol + "): " + result);
+        infoPanel.addLog("ATTACK (" + selectedRow + "," + selectedCol + "): " + result);
         finishAttackSequence();
     }
 
@@ -246,7 +242,7 @@ public class GameView extends JFrame implements IGameView {
         if (!isValidSelection()) return;
 
         String result = attackController.playerCrossBombAttack(selectedRow, selectedCol);
-        infoPanel.addLog("💣 CROSS BOMB (" + selectedRow + "," + selectedCol + "): " + result);
+        infoPanel.addLog( "CROSS BOMB (" + selectedRow + "," + selectedCol + "): " + result);
         finishAttackSequence();
     }
 
@@ -256,8 +252,14 @@ public class GameView extends JFrame implements IGameView {
         String result = attackController.playerTorpedoAttack(
                 selectedRow, selectedCol, horizontal
         );
-        String direction = horizontal ? "→" : "↓";
-        infoPanel.addLog("🚀 TORPEDO " + direction + " (" + selectedRow + "," +
+        String direction;
+        if (horizontal) {
+            direction = "→";
+        } else {
+            direction = "↓";
+        }
+
+        infoPanel.addLog("TORPEDO " + direction + " (" + selectedRow + "," +
                 selectedCol + "): " + result);
         finishAttackSequence();
     }
@@ -266,7 +268,7 @@ public class GameView extends JFrame implements IGameView {
         if (!isValidSelection()) return;
 
         String result = attackController.playerNukeAttack(selectedRow, selectedCol);
-        infoPanel.addLog("☢️ NUKE (" + selectedRow + "," + selectedCol + "): " + result);
+        infoPanel.addLog("NUKE (" + selectedRow + "," + selectedCol + "): " + result);
         finishAttackSequence();
     }
 
@@ -300,7 +302,7 @@ public class GameView extends JFrame implements IGameView {
      * Handle continuous player turn after hit
      */
     private void handleContinuousPlayerTurn() {
-        actionPanel.setStatus("💥 HIT! Attack again");
+        actionPanel.setStatus("HIT! Attack again");
         headerPanel.setTurnMessage("Your turn - Hit! Attack again");
     }
 
@@ -308,7 +310,7 @@ public class GameView extends JFrame implements IGameView {
      * Execute machine's turn with animation
      */
     private void executeMachineTurn() {
-        headerPanel.setTurnMessage("🤖 Machine's turn...");
+        headerPanel.setTurnMessage("Machine's turn...");
         actionPanel.setStatus("Machine is thinking...");
         actionPanel.disableAllAttackButtons();
         enemyBoard.setInteractive(false);
@@ -316,7 +318,7 @@ public class GameView extends JFrame implements IGameView {
         // Delay for visual effect
         Timer timer = new Timer(800, e -> {
             String result = attackController.machineAttack();
-            infoPanel.addLog("🤖 Machine: " + result);
+            infoPanel.addLog("Machine: " + result);
             updateAllComponents();
 
             if (gameLifecycle.isGameFinished()) {
@@ -351,8 +353,6 @@ public class GameView extends JFrame implements IGameView {
         enemyBoard.clearSelection();
         actionPanel.disableAllAttackButtons();
     }
-
-    // ==================== IGameView Implementation ====================
 
     @Override
     public void updateBoards() {
@@ -401,20 +401,34 @@ public class GameView extends JFrame implements IGameView {
 
     @Override
     public void showVictory(String winner) {
-        boolean playerWon = winner.equals(playerName); // ACTUALIZADO para usar nombre real
+        boolean playerWon = winner.equals(playerName);
 
-        // NUEVO: Si el jugador ganó, actualizar la base de datos
         if (playerWon) {
             updatePlayerWinsInDatabase();
         }
 
+        String message;
+        String title;
+        int messageType;
+
+        if (playerWon) {
+            message = "You Won!\nPlay again?";
+            title = "VICTORY!";
+            messageType = JOptionPane.INFORMATION_MESSAGE;
+        } else {
+            message = "Machine Won\nPlay again?";
+            title = "DEFEAT";
+            messageType = JOptionPane.WARNING_MESSAGE;
+        }
+
         int option = JOptionPane.showConfirmDialog(
                 this,
-                playerWon ? "🎉 You Won!\nPlay again?" : "💀 Machine Won\nPlay again?",
-                playerWon ? "VICTORY!" : "DEFEAT",
+                message,
+                title,
                 JOptionPane.YES_NO_OPTION,
-                playerWon ? JOptionPane.INFORMATION_MESSAGE : JOptionPane.WARNING_MESSAGE
+                messageType
         );
+
 
         if (option == JOptionPane.YES_OPTION) {
             resetView();
@@ -423,22 +437,21 @@ public class GameView extends JFrame implements IGameView {
         }
     }
 
-    /**
-     * NUEVO: Actualiza las victorias del jugador en la base de datos
-     */
+   /** Update player's win count in the database
+    */
     private void updatePlayerWinsInDatabase() {
         boolean success = playerDAO.incrementWins(playerName);
 
         if (success) {
             int totalWins = playerDAO.getPlayerWins(playerName);
-            infoPanel.addLog("🏆 Victory recorded! Total wins: " + totalWins);
+            infoPanel.addLog("Victory recorded! Total wins: " + totalWins);
         } else {
             System.err.println("Error updating player wins in database");
         }
     }
 
-    /**
-     * NUEVO: Vuelve a la pantalla de login
+    /**Function to return to login screen
+     * Disposes current game view and opens login view
      */
     private void backToLogin() {
         dispose();
@@ -447,7 +460,8 @@ public class GameView extends JFrame implements IGameView {
             loginView.setVisible(true);
         });
     }
-
+    /** Enable or disable attack buttons based on game state
+     */
     @Override
     public void enableAttackButtons(boolean enable) {
         if (enable) {
@@ -456,26 +470,26 @@ public class GameView extends JFrame implements IGameView {
             actionPanel.disableAllAttackButtons();
         }
     }
-
+    /** Reset the entire view and start a new game
+     * Resets game state and UI components
+     * */
     @Override
     public void resetView() {
         gameLifecycle.resetGame();
-        gameLifecycle.startNewGame(playerName, "default"); // USA NOMBRE REAL
+        gameLifecycle.startNewGame(playerName, "default");
 
         clearSelection();
         playerBoard.clearSelection();
 
-        actionPanel.setStatus("⚔️ New game started");
+        actionPanel.setStatus("New game started");
         headerPanel.setTurnMessage("Your turn - Select a cell to attack");
 
         infoPanel.clearLog();
-        infoPanel.addLog("⚔️ New game started for " + playerName + "!");
+        infoPanel.addLog("New game started for " + playerName + "!");
 
         updateAllComponents();
         enemyBoard.setInteractive(true);
     }
-
-    // ==================== Helper Methods ====================
 
     /**
      * Update all UI components at once
