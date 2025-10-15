@@ -1,10 +1,6 @@
 package View;
 
-import Controller.GameController;
-import Controller.Interfaces.IAttackController;
-import Controller.Interfaces.IGameLifecycle;
-import Controller.Interfaces.ITurnController;
-import Controller.Interfaces.IBoardController;
+import Controller.Interfaces.*;
 import Model.Boat.Boat;
 import Model.Player.HumanPlayer;
 import View.Components.*;
@@ -13,48 +9,77 @@ import javax.swing.*;
 import java.awt.*;
 
 /**
- * GameView - Main Frame (actualizado con ISP)
+ * GameView - View.Main Frame (Refactored with SOLID principles)
+ *
+ * Responsibilities:
+ * - Coordinate visual components
+ * - Delegate actions to appropriate controllers
+ * - Update UI based on game state
+ *
+ * Follows SRP: Only manages UI coordination
+ * Follows DIP: Depends on controller interfaces, not implementations
+ * Follows ISP: Uses segregated controller interfaces
  */
-public class GameView extends JFrame {
+public class GameView extends JFrame implements IGameView {
 
-
+    // Controller dependencies (DIP - depend on abstractions)
     private final IAttackController attackController;
     private final ITurnController turnController;
-    private final IGameLifecycle gameController;
+    private final IGameLifecycle gameLifecycle;
     private final IBoardController boardController;
 
+    // UI Components (SRP - each has single responsibility)
     private HeaderPanel headerPanel;
     private BoardPanel playerBoard;
     private BoardPanel enemyBoard;
     private InfoPanel infoPanel;
     private ActionPanel actionPanel;
-
     private JLabel playerShipsLabel;
     private JLabel enemyShipsLabel;
 
-
+    // Selection state (managed by view coordinator)
     private int selectedRow = -1;
     private int selectedCol = -1;
 
-    public GameView() {
+    /**
+     * Constructor with dependency injection
+     * Follows DIP: Receives interfaces, not concrete implementations
+     *
+     * @param attackController Controller for attack operations
+     * @param turnController Controller for turn management
+     * @param gameLifecycle Controller for game lifecycle
+     * @param boardController Controller for board operations
+     */
+    public GameView(
+            IAttackController attackController,
+            ITurnController turnController,
+            IGameLifecycle gameLifecycle,
+            IBoardController boardController
+    ) {
+        this.attackController = attackController;
+        this.turnController = turnController;
+        this.gameLifecycle = gameLifecycle;
+        this.boardController = boardController;
 
-        GameController gc = new GameController();
-        this.attackController = gc;
-        this.turnController = gc;
-        this.gameController = gc;
-        this.boardController = gc;
-
-        if (!gameController.startNewGame("Player", "password")) {
-            JOptionPane.showMessageDialog(this, "Couldn't start a new game",
-                    "Error", JOptionPane.ERROR_MESSAGE);
-            System.exit(1);
-        }
-
+        initializeGame();
         initComponents();
         setupListeners();
         updateAllComponents();
     }
 
+    /**
+     * Initialize game state through lifecycle controller
+     */
+    private void initializeGame() {
+        if (!gameLifecycle.startNewGame("Player", "password")) {
+            showErrorAndExit("Couldn't start a new game");
+        }
+    }
+
+    /**
+     * Initialize all UI components
+     * Follows SRP: Delegates to component creation methods
+     */
     private void initComponents() {
         setTitle("Navy Battle - SOLID Edition");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -62,15 +87,13 @@ public class GameView extends JFrame {
         setResizable(false);
         getContentPane().setBackground(new Color(224, 247, 250));
 
-
+        // Create all panels
         headerPanel = new HeaderPanel();
         infoPanel = new InfoPanel();
         actionPanel = new ActionPanel();
-
-
         JPanel boardsPanel = createBoardsPanel();
 
-
+        // Add to frame
         add(headerPanel, BorderLayout.NORTH);
         add(boardsPanel, BorderLayout.CENTER);
         add(infoPanel, BorderLayout.EAST);
@@ -80,15 +103,16 @@ public class GameView extends JFrame {
         setLocationRelativeTo(null);
     }
 
+    /**
+     * Create the boards panel with both player and enemy boards
+     */
     private JPanel createBoardsPanel() {
         JPanel boardsPanel = new JPanel();
         boardsPanel.setLayout(new FlowLayout(FlowLayout.CENTER, 40, 30));
         boardsPanel.setBackground(new Color(224, 247, 250));
 
-        JPanel playerSection = createBoardSection("Your Crew", true);
-
-
-        JPanel enemySection = createBoardSection("Enemy Board", false);
+        JPanel playerSection = createBoardSection("Your Fleet", true);
+        JPanel enemySection = createBoardSection("Enemy Waters", false);
 
         boardsPanel.add(playerSection);
         boardsPanel.add(enemySection);
@@ -96,30 +120,24 @@ public class GameView extends JFrame {
         return boardsPanel;
     }
 
+    /**
+     * Create a single board section with title and ship counter
+     */
     private JPanel createBoardSection(String title, boolean isPlayerBoard) {
         JPanel section = new JPanel();
         section.setLayout(new BoxLayout(section, BoxLayout.Y_AXIS));
         section.setBackground(new Color(224, 247, 250));
 
+        // Title
         JLabel titleLabel = new JLabel(title);
         titleLabel.setFont(new Font("Arial", Font.BOLD, 18));
         titleLabel.setForeground(new Color(0, 96, 100));
         titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        JPanel boardContainer = new JPanel() {
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                Graphics2D g2d = (Graphics2D) g;
-                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2d.setColor(Color.WHITE);
-                g2d.fillRoundRect(0, 0, getWidth(), getHeight(), 15, 15);
-            }
-        };
-        boardContainer.setOpaque(false);
-        boardContainer.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
-
+        // Board container with rounded border
+        JPanel boardContainer = createRoundedPanel();
         BoardPanel board = new BoardPanel(isPlayerBoard);
+
         if (isPlayerBoard) {
             playerBoard = board;
         } else {
@@ -127,6 +145,7 @@ public class GameView extends JFrame {
         }
         boardContainer.add(board);
 
+        // Ships counter
         JLabel shipsLabel = new JLabel("Ships: 10");
         shipsLabel.setFont(new Font("Arial", Font.PLAIN, 14));
         shipsLabel.setForeground(new Color(0, 96, 100));
@@ -138,6 +157,7 @@ public class GameView extends JFrame {
             enemyShipsLabel = shipsLabel;
         }
 
+        // Assemble section
         section.add(titleLabel);
         section.add(Box.createVerticalStrut(15));
         section.add(boardContainer);
@@ -147,156 +167,220 @@ public class GameView extends JFrame {
         return section;
     }
 
+    /**
+     * Create a rounded panel for board container
+     */
+    private JPanel createRoundedPanel() {
+        return new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2d = (Graphics2D) g;
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
+                        RenderingHints.VALUE_ANTIALIAS_ON);
+                g2d.setColor(Color.WHITE);
+                g2d.fillRoundRect(0, 0, getWidth(), getHeight(), 15, 15);
+            }
+        };
+    }
+
+    /**
+     * Setup all event listeners
+     * Follows SRP: Delegates to specific handler methods
+     */
     private void setupListeners() {
+        // Enemy board cell selection
+        enemyBoard.setOnCellClickListener(this::handleCellSelection);
 
-        enemyBoard.setOnCellClickListener((row, col) -> {
-            if (gameController.isGameFinished() || !turnController.isPlayerTurn()) {
-                return;
-            }
+        // Attack action buttons
+        actionPanel.setOnAttackListener(this::handleAttackAction);
 
-            selectedRow = row;
-            selectedCol = col;
-            actionPanel.setStatus("Cell (" + row + "," + col + ") Selected");
-            updateAttackButtons();
-        });
-
-
-        actionPanel.setOnAttackListener(attackType -> {
-            switch (attackType) {
-                case BASIC -> executeBasicAttack();
-                case CROSS_BOMB -> executeCrossBombAttack();
-                case TORPEDO_H -> executeTorpedoAttack(true);
-                case TORPEDO_V -> executeTorpedoAttack(false);
-                case NUKE -> executeNukeAttack();
-                case RESET -> resetGame();
-            }
-        });
-
+        // Enable reset button always
         actionPanel.enableResetButton();
     }
 
+    /**
+     * Handle cell selection on enemy board
+     */
+    private void handleCellSelection(int row, int col) {
+        if (gameLifecycle.isGameFinished() || !turnController.isPlayerTurn()) {
+            return;
+        }
+
+        selectedRow = row;
+        selectedCol = col;
+        actionPanel.setStatus("Cell (" + row + "," + col + ") selected");
+        updateAttackButtons();
+    }
+
+    /**
+     * Handle attack action from action panel
+     * Follows OCP: New attack types can be added without modifying this method
+     */
+    private void handleAttackAction(ActionPanel.AttackType attackType) {
+        switch (attackType) {
+            case BASIC -> executeBasicAttack();
+            case CROSS_BOMB -> executeCrossBombAttack();
+            case TORPEDO_H -> executeTorpedoAttack(true);
+            case TORPEDO_V -> executeTorpedoAttack(false);
+            case NUKE -> executeNukeAttack();
+            case RESET -> resetView();
+        }
+    }
+
+    // ==================== Attack Execution Methods ====================
+
     private void executeBasicAttack() {
-        if (!isValidAttack()) return;
+        if (!isValidSelection()) return;
+
         String result = attackController.playerAttack(selectedRow, selectedCol);
-        infoPanel.addLog("ATTACK (" + selectedRow + "," + selectedCol + "): " + result);
-        finishAttack();
+        infoPanel.addLog("⚔️ ATTACK (" + selectedRow + "," + selectedCol + "): " + result);
+        finishAttackSequence();
     }
 
     private void executeCrossBombAttack() {
-        if (!isValidAttack()) return;
+        if (!isValidSelection()) return;
+
         String result = attackController.playerCrossBombAttack(selectedRow, selectedCol);
-        infoPanel.addLog("CROSS BOMB (" + selectedRow + "," + selectedCol + "): " + result);
-        finishAttack();
+        infoPanel.addLog("💣 CROSS BOMB (" + selectedRow + "," + selectedCol + "): " + result);
+        finishAttackSequence();
     }
 
     private void executeTorpedoAttack(boolean horizontal) {
-        if (!isValidAttack()) return;
-        String result = attackController.playerTorpedoAttack(selectedRow, selectedCol, horizontal);
-        String dir = horizontal ? "→" : "↓";
-        infoPanel.addLog("TORPEDO " + dir + " (" + selectedRow + "," + selectedCol + "): " + result);
-        finishAttack();
+        if (!isValidSelection()) return;
+
+        String result = attackController.playerTorpedoAttack(
+                selectedRow, selectedCol, horizontal
+        );
+        String direction = horizontal ? "→" : "↓";
+        infoPanel.addLog("🚀 TORPEDO " + direction + " (" + selectedRow + "," +
+                selectedCol + "): " + result);
+        finishAttackSequence();
     }
 
     private void executeNukeAttack() {
-        if (!isValidAttack()) return;
+        if (!isValidSelection()) return;
+
         String result = attackController.playerNukeAttack(selectedRow, selectedCol);
-        infoPanel.addLog("NUKE (" + selectedRow + "," + selectedCol + "): " + result);
-        finishAttack();
+        infoPanel.addLog("☢️ NUKE (" + selectedRow + "," + selectedCol + "): " + result);
+        finishAttackSequence();
     }
 
-    private boolean isValidAttack() {
+    /**
+     * Validates that a cell is selected
+     */
+    private boolean isValidSelection() {
         return selectedRow != -1 && selectedCol != -1;
     }
 
-    private void finishAttack() {
-        selectedRow = -1;
-        selectedCol = -1;
-        enemyBoard.clearSelection();
-        actionPanel.disableAllAttackButtons();
-
+    /**
+     * Complete attack sequence and check game state
+     */
+    private void finishAttackSequence() {
+        clearSelection();
         updateAllComponents();
 
-        if (gameController.isGameFinished()) {
-            showVictory();
+        if (gameLifecycle.isGameFinished()) {
+            handleGameEnd();
             return;
         }
 
         if (turnController.isPlayerTurn()) {
-
-            actionPanel.setStatus("IMPACT! You can attack again");
-            headerPanel.setTurnMessage("Your turn - Impact! Attack again");
+            handleContinuousPlayerTurn();
         } else {
             executeMachineTurn();
         }
     }
 
+    /**
+     * Handle continuous player turn after hit
+     */
+    private void handleContinuousPlayerTurn() {
+        actionPanel.setStatus("💥 HIT! Attack again");
+        headerPanel.setTurnMessage("Your turn - Hit! Attack again");
+    }
+
+    /**
+     * Execute machine's turn with animation
+     */
     private void executeMachineTurn() {
-        headerPanel.setTurnMessage("Machine's turn...");
-        actionPanel.setStatus("The machine is thinking...");
+        headerPanel.setTurnMessage("🤖 Machine's turn...");
+        actionPanel.setStatus("Machine is thinking...");
         actionPanel.disableAllAttackButtons();
         enemyBoard.setInteractive(false);
 
+        // Delay for visual effect
         Timer timer = new Timer(800, e -> {
             String result = attackController.machineAttack();
-            infoPanel.addLog("Machine: " + result);
+            infoPanel.addLog("🤖 Machine: " + result);
             updateAllComponents();
 
-            if (gameController.isGameFinished()) {
-                showVictory();
+            if (gameLifecycle.isGameFinished()) {
+                handleGameEnd();
             } else if (!turnController.isPlayerTurn()) {
+                // Machine hit - attacks again
                 executeMachineTurn();
             } else {
-                headerPanel.setTurnMessage("Your turn - Select a cell to attack");
-                actionPanel.setStatus("Your turn");
-                enemyBoard.setInteractive(true);
+                // Player's turn now
+                enablePlayerTurn();
             }
         });
         timer.setRepeats(false);
         timer.start();
     }
 
-    private void updateAllComponents() {
-        updateBoards();
-        updateGameInfo();
-        updatePowerUps();
-        updateAttackButtons();
+    /**
+     * Enable player turn after machine finishes
+     */
+    private void enablePlayerTurn() {
+        headerPanel.setTurnMessage("Your turn - Select a cell to attack");
+        actionPanel.setStatus("Your turn");
+        enemyBoard.setInteractive(true);
     }
 
-    private void updateBoards() {
+    /**
+     * Clear cell selection
+     */
+    private void clearSelection() {
+        selectedRow = -1;
+        selectedCol = -1;
+        enemyBoard.clearSelection();
+        actionPanel.disableAllAttackButtons();
+    }
+
+    // ==================== IGameView Implementation ====================
+
+    @Override
+    public void updateBoards() {
         int[][] playerBoardState = boardController.getPlayerOwnBoardState();
         int[][] enemyBoardState = boardController.getPlayerAttackBoardState();
 
-        Boat[][] playerBoatGrid = getBoatGrid(gameController.getCurrentMatch().getPlayer().getOwnBoard());
+        Boat[][] playerBoatGrid = extractBoatGrid(
+                gameLifecycle.getCurrentMatch().getPlayer().getOwnBoard()
+        );
 
         playerBoard.updateBoard(playerBoardState, playerBoatGrid);
         enemyBoard.updateBoard(enemyBoardState, null);
     }
 
-    private Boat[][] getBoatGrid(Model.Board.Board board) {
-        Boat[][] grid = new Boat[10][10];
-        for (int i = 0; i < 10; i++) {
-            for (int j = 0; j < 10; j++) {
-                grid[i][j] = board.getBoatAt(i, j);
-            }
-        }
-        return grid;
-    }
-
-    private void updateGameInfo() {
-        if (gameController.getCurrentMatch() != null) {
-            int playerShips = gameController.getCurrentMatch().getPlayer()
-                    .getOwnBoard().getRemainingBoats();
-            int enemyShips = gameController.getCurrentMatch().getMachine()
-                    .getOwnBoard().getRemainingBoats();
+    @Override
+    public void updateGameInfo() {
+        if (gameLifecycle.getCurrentMatch() != null) {
+            int playerShips = gameLifecycle.getCurrentMatch()
+                    .getPlayer().getOwnBoard().getRemainingBoats();
+            int enemyShips = gameLifecycle.getCurrentMatch()
+                    .getMachine().getOwnBoard().getRemainingBoats();
 
             playerShipsLabel.setText("Ships: " + playerShips);
             enemyShipsLabel.setText("Ships: " + enemyShips);
         }
     }
 
-    private void updatePowerUps() {
-        if (gameController.getCurrentMatch() != null) {
-            HumanPlayer human = (HumanPlayer) gameController.getCurrentMatch().getPlayer();
+    @Override
+    public void updatePowerUpsDisplay() {
+        if (gameLifecycle.getCurrentMatch() != null) {
+            HumanPlayer human = (HumanPlayer) gameLifecycle.getCurrentMatch().getPlayer();
+
             infoPanel.updatePowerUps(
                     human.getPowerUps().getCrossBombs(),
                     human.getPowerUps().getTorpedoes(),
@@ -305,11 +389,78 @@ public class GameView extends JFrame {
         }
     }
 
-    private void updateAttackButtons() {
-        boolean cellSelected = (selectedRow != -1 && selectedCol != -1);
+    @Override
+    public void showMessage(String message) {
+        actionPanel.setStatus(message);
+        infoPanel.addLog(message);
+    }
 
-        if (cellSelected && gameController.getCurrentMatch() != null) {
-            HumanPlayer human = (HumanPlayer) gameController.getCurrentMatch().getPlayer();
+    @Override
+    public void showVictory(String winner) {
+        boolean playerWon = winner.equals("Player");
+
+        int option = JOptionPane.showConfirmDialog(
+                this,
+                playerWon ? "🎉 You Won!\nPlay again?" : "💀 Machine Won\nPlay again?",
+                playerWon ? "VICTORY!" : "DEFEAT",
+                JOptionPane.YES_NO_OPTION,
+                playerWon ? JOptionPane.INFORMATION_MESSAGE : JOptionPane.WARNING_MESSAGE
+        );
+
+        if (option == JOptionPane.YES_OPTION) {
+            resetView();
+        } else {
+            System.exit(0);
+        }
+    }
+
+    @Override
+    public void enableAttackButtons(boolean enable) {
+        if (enable) {
+            updateAttackButtons();
+        } else {
+            actionPanel.disableAllAttackButtons();
+        }
+    }
+
+    @Override
+    public void resetView() {
+        gameLifecycle.resetGame();
+        gameLifecycle.startNewGame("Player", "password");
+
+        clearSelection();
+        playerBoard.clearSelection();
+
+        actionPanel.setStatus("⚔️ New game started");
+        headerPanel.setTurnMessage("Your turn - Select a cell to attack");
+
+        infoPanel.clearLog();
+        infoPanel.addLog("⚔️ New game started!");
+
+        updateAllComponents();
+        enemyBoard.setInteractive(true);
+    }
+
+    // ==================== Helper Methods ====================
+
+    /**
+     * Update all UI components at once
+     */
+    private void updateAllComponents() {
+        updateBoards();
+        updateGameInfo();
+        updatePowerUpsDisplay();
+        updateAttackButtons();
+    }
+
+    /**
+     * Update attack buttons based on selection and power-ups
+     */
+    private void updateAttackButtons() {
+        boolean cellSelected = isValidSelection();
+
+        if (cellSelected && gameLifecycle.getCurrentMatch() != null) {
+            HumanPlayer human = (HumanPlayer) gameLifecycle.getCurrentMatch().getPlayer();
 
             actionPanel.setAttackButtonsEnabled(
                     true,
@@ -323,54 +474,37 @@ public class GameView extends JFrame {
         }
     }
 
-    private void showVictory() {
-        String winner = gameController.getWinner().getUsername();
-        boolean playerWon = winner.equals("Player");
-
-        int option = JOptionPane.showConfirmDialog(
-                this,
-                playerWon ? "You Won!\nPlay again?" : "Machine won\nPlay again?",
-                playerWon ? "VICTORY!" : "YOU LOSE",
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.INFORMATION_MESSAGE
-        );
-
-        if (option == JOptionPane.YES_OPTION) {
-            resetGame();
-        } else {
-            System.exit(0);
-        }
-    }
-
-    private void resetGame() {
-        gameController.resetGame();
-        gameController.startNewGame("Player", "password");
-
-        selectedRow = -1;
-        selectedCol = -1;
-
-        enemyBoard.clearSelection();
-        playerBoard.clearSelection();
-        actionPanel.disableAllAttackButtons();
-        actionPanel.setStatus("New game started");
-        headerPanel.setTurnMessage("Your Turn - Select a cell to attack");
-        infoPanel.clearLog();
-        infoPanel.addLog("New game started");
-
-        updateAllComponents();
-        enemyBoard.setInteractive(true);
-    }
-
-    public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> {
-            try {
-                UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-            } catch (Exception e) {
-                e.printStackTrace();
+    /**
+     * Extract boat grid from board for rendering
+     */
+    private Boat[][] extractBoatGrid(Model.Board.Board board) {
+        Boat[][] grid = new Boat[10][10];
+        for (int i = 0; i < 10; i++) {
+            for (int j = 0; j < 10; j++) {
+                grid[i][j] = board.getBoatAt(i, j);
             }
+        }
+        return grid;
+    }
 
-            GameView game = new GameView();
-            game.setVisible(true);
-        });
+    /**
+     * Handle game end
+     */
+    private void handleGameEnd() {
+        String winner = gameLifecycle.getWinner().getUsername();
+        showVictory(winner);
+    }
+
+    /**
+     * Show error and exit application
+     */
+    private void showErrorAndExit(String message) {
+        JOptionPane.showMessageDialog(
+                this,
+                message,
+                "Error",
+                JOptionPane.ERROR_MESSAGE
+        );
+        System.exit(1);
     }
 }

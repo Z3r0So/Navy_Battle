@@ -1,8 +1,9 @@
-package Services;
+package Services.Interfaces;
 
 import Attacks.Attack;
 import Model.Match.Match;
 import Model.Player.Player;
+import Services.AttackResult;
 
 public interface IAttackExecutor {
         /** Executes a player's attack and updates boards

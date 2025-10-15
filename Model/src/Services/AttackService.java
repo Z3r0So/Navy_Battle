@@ -2,6 +2,7 @@ package Services;
 
 import Attacks.Attack;
 import Model.Board.Board;
+import Services.Interfaces.IAttackService;
 
 /**
  * Attack Service

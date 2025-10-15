@@ -1,4 +1,4 @@
-package Services;
+package Services.Interfaces;
 import Model.Board.Board;
 import Model.Boat.Boat;
 

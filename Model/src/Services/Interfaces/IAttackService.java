@@ -1,4 +1,4 @@
-package Services;
+package Services.Interfaces;
 import Attacks.Attack;
 import Model.Board.Board;
 
