@@ -12,21 +12,21 @@ import Services.Interfaces.IShipPlacementService;
 
 /**
  * GameViewFactory - Factory for creating GameView with all dependencies
+ * ACTUALIZADO para recibir el nombre del jugador desde el login
  *
  * Follows SRP: Only responsible for object creation and wiring
  * Follows DIP: Creates dependencies based on interfaces
- *
- * This is the composition root where all dependencies are wired together
  */
 public class GameViewFactory {
 
     /**
      * Creates a fully configured GameView with all dependencies
-     * This is the main entry point for the application
+     * CON NOMBRE DE JUGADOR (para integración con login)
      *
+     * @param playerName Nombre del jugador desde el login
      * @return Configured GameView ready to display
      */
-    public static GameView createGameView() {
+    public static GameView createGameView(String playerName) {
         // Create all dependencies from bottom up
 
         // Services layer
@@ -40,7 +40,7 @@ public class GameViewFactory {
         // Fleet management
         IFleetManager fleetManager = new FleetManager(placementService);
 
-        // View.Main game controller with all dependencies
+        // Main game controller with all dependencies
         GameController gameController = new GameController(
                 playerCreator,
                 fleetManager,
@@ -48,8 +48,9 @@ public class GameViewFactory {
                 attackService
         );
 
-        // Create view with controller interfaces (DIP)
+        // Create view with controller interfaces (DIP) and player name
         return new GameView(
+                playerName,      // NUEVO: nombre del jugador
                 gameController,  // IAttackController
                 gameController,  // ITurnController
                 gameController,  // IGameLifecycle
@@ -58,8 +59,19 @@ public class GameViewFactory {
     }
 
     /**
+     * Creates a fully configured GameView with default player name
+     * MANTENER PARA COMPATIBILIDAD CON CÓDIGO ANTIGUO
+     *
+     * @return Configured GameView ready to display
+     */
+    public static GameView createGameView() {
+        return createGameView("Player"); // Nombre por defecto
+    }
+
+    /**
      * Creates GameView with custom dependencies (for testing or customization)
      *
+     * @param playerName Nombre del jugador
      * @param attackController Controller for attacks
      * @param turnController Controller for turns
      * @param gameLifecycle Controller for game lifecycle
@@ -67,12 +79,14 @@ public class GameViewFactory {
      * @return Configured GameView
      */
     public static GameView createGameView(
+            String playerName,
             IAttackController attackController,
             ITurnController turnController,
             IGameLifecycle gameLifecycle,
             IBoardController boardController
     ) {
         return new GameView(
+                playerName,
                 attackController,
                 turnController,
                 gameLifecycle,
