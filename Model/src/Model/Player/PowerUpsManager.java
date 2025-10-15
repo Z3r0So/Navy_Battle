@@ -1,6 +1,6 @@
 package Model.Player;
 
-import Services.IShipPlacementService;
+import Model.Player.Interfaces.IPowerUps;
 
 public class PowerUpsManager implements IPowerUps {
         private int crossBombs;

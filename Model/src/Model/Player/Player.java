@@ -2,15 +2,20 @@ package Model.Player;
 
 import Attacks.Attack;
 import Model.Board.Board;
+import Model.Player.Interfaces.IPlayer;
 
-public abstract class Player implements  IPlayer {
+public abstract class Player implements IPlayer {
     private String Username;
     private int wins;
     private String password;
 
     protected Board ownBoard;
     protected Board attackBoard;
-    //Constructor for a player, creating instances of the boards
+    /*Constructor for a player, creating instances of the boards and initializing the wins to 0
+    * @param username The username of the player
+    * @param password The password of the player
+    * @return A new instance of Player
+    * */
     public Player(String username, String password) {
         this.Username = username;
         this.password = password;
@@ -30,7 +35,8 @@ public abstract class Player implements  IPlayer {
     public int getWins() {
         return wins;
     }
-    //Specific method that add values to the wins attribute
+    /*Specific method that add values to the wins attribute
+    * */
     public void addWins() {
         wins++;
     }
@@ -40,13 +46,18 @@ public abstract class Player implements  IPlayer {
     public void setPassword(String password) {
         this.password = password;
     }
+    /*Method to get the boards of the player
+    * */
     public Board getOwnBoard() {
         return ownBoard;
     }
+    /*Method to get the attack board of the player
+    * */
     public Board getAttackBoard() {
         return attackBoard;
     }
-    //Method that allows to reset the boards
+    /*Method that allows to reset the boards to their initial state
+    * */
     public void resetBoards() {
         ownBoard.initialize();
         attackBoard.initialize();
