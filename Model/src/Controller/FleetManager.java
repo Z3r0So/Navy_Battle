@@ -3,7 +3,7 @@ package Controller;
 import Controller.Interfaces.IFleetManager;
 import Model.Board.Board;
 import Model.Boat.*;
-import Services.IShipPlacementService;
+import Services.Interfaces.IShipPlacementService;
 
 public class FleetManager implements IFleetManager {
     private final IShipPlacementService placementService;

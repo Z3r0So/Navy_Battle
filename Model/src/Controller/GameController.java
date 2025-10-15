@@ -10,10 +10,9 @@ import Model.Match.Match;
 import Model.Player.HumanPlayer;
 import Model.Player.Interfaces.IPlayerCreator;
 import Services.*;
-import Model.Player.Machine;
 import Model.Player.Player;
-
-import java.util.Random;
+import Services.Interfaces.IAttackExecutor;
+import Services.Interfaces.IAttackService;
 
 public class GameController implements
         IGameLifecycle,

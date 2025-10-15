@@ -4,8 +4,10 @@ import Attacks.Attack;
 import Model.Match.Match;
 import Model.Player.Machine;
 import Model.Player.Player;
+import Services.Interfaces.IAttackExecutor;
+import Services.Interfaces.IAttackService;
 
-public class AttackExecutor implements IAttackExecutor{
+public class AttackExecutor implements IAttackExecutor {
     private final IAttackService attackService;
 
     /**Constructor with dependency injection

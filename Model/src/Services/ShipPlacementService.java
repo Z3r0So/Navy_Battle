@@ -2,6 +2,8 @@ package Services;
 
 import Model.Boat.Boat;
 import Model.Board.Board;
+import Services.Interfaces.IShipPlacementService;
+
 import java.util.Random;
 
 /**
@@ -13,6 +15,7 @@ public class ShipPlacementService implements IShipPlacementService {
 
     private Random random;
     private static final int MAX_PLACEMENT_ATTEMPTS = 100;
+    private static final int MAX_FLEET_ATTEMPTS = 10;
     /**
      * Constructor for creating random bound value
     * */
@@ -32,11 +35,12 @@ public class ShipPlacementService implements IShipPlacementService {
             int row = random.nextInt(board.getRows()); //With .nextInt we get a random number between 0 and the value passed as parameter (10 in this case but exclusive so 0-9)
             int column = random.nextInt(board.getColumns());
             boolean horizontal = random.nextBoolean();
-
-            if (board.placeShip(boat, row, column, horizontal)) {
-                return true;
+            if (isValidPlacement(board, boat, row, column, horizontal)) {
+                boolean placed = board.placeShip(boat, row, column, horizontal);
+                if (placed) {
+                    return true;
+                }
             }
-
             attempts++;
         }
 
