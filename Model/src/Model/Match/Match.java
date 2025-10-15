@@ -66,7 +66,7 @@ public class Match {
     }
 
     /**Checks if the game has ended
-     * Delegates to game end validator (SRP)
+     * Delegates to game end validator
      */
     private void checkGameEnd() {
         GameEndResult endResult = gameEndValidator.checkGameEnd(

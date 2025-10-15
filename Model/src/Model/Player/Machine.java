@@ -12,7 +12,6 @@ import java.util.Random;
 public class Machine extends Player {
     private final IMachineStrategy attackStrategy;
 
-    // AI State - managed by Machine, used by Strategy
     private boolean targetMode;
     private List<int[]> targetStack;
     private List<int[]> hitHistory;
@@ -47,7 +46,7 @@ public class Machine extends Player {
      */
     @Override
     public Attack makeAttack(Board enemyBoard) {
-        // Delegate to strategy (SRP + DIP)
+        // Delegate to strategy
         int[] coordinates = attackStrategy.chooseAttackCoordinates(
                 enemyBoard,
                 targetMode,
@@ -140,7 +139,7 @@ public class Machine extends Player {
     }
 
     /**
-     * Resets the machine's AI state
+     * Resets the machine's state
      * Useful for starting a new game
      */
     public void resetAIState() {

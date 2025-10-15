@@ -34,7 +34,7 @@ public class HumanPlayer extends Player{
     * */
     @Override
     public Attack makeAttack(Board enemyBoard) {
-        //Delegate validation to injected validator (DIP)
+        //Delegate validation to injected validator
         coordinatesValidator.validateAttackCoordinates(
                 nextAttackRow,
                 nextAttackColumn,

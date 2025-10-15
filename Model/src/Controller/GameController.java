@@ -22,7 +22,6 @@ public class GameController implements
 
     private Match currentMatch;
 
-    // Injected dependencies (DIP)
     private final IPlayerCreator playerCreator;
     private final IFleetManager fleetManager;
     private final IAttackExecutor attackExecutor;
@@ -48,8 +47,6 @@ public class GameController implements
         this.attackExecutor = attackExecutor;
         this.attackService = attackService;
     }
-
-    // ==================== IGameLifecycle Implementation ====================
 
     /**
      * Starts a new game between human and machine
@@ -121,12 +118,9 @@ public class GameController implements
         return currentMatch;
     }
 
-    // ==================== IAttackController Implementation ====================
-
     /**
      * Executes a basic player attack
-     * Delegates to attack executor (SRP)
-     *
+     * Delegates to attack executor
      * @param row Row to attack
      * @param column Column to attack
      * @return Result message of the attack
@@ -136,14 +130,13 @@ public class GameController implements
         if (!validateGameState()) {
             return "No game in progress!";
         }
-
         try {
             HumanPlayer human = (HumanPlayer) currentMatch.getPlayer();
             human.setNextAttack(row, column);
 
             Attack attack = human.makeAttack(currentMatch.getMachine().getOwnBoard());
 
-            // Use attack executor (SRP + DIP)
+            // Use attack executor
             AttackResult result = attackExecutor.executeAttack(
                     currentMatch,
                     attack,
@@ -246,7 +239,6 @@ public class GameController implements
 
     /**
      * Executes a nuke attack (3x3 area)
-     *
      * @param row Center row of the nuke
      * @param column Center column of the nuke
      * @return Result message of the attack
@@ -288,8 +280,7 @@ public class GameController implements
 
     /**
      * Executes the machine's attack
-     * Delegates to attack executor (SRP)
-     *
+     * Delegates to attack executor
      * @return Result message of the attack
      */
     @Override
@@ -307,7 +298,7 @@ public class GameController implements
         }
 
         try {
-            // Use attack executor for machine attack (SRP + DIP)
+            // Use attack executor for machine attack
             AttackResult result = attackExecutor.executeMachineAttack(currentMatch);
             return result.getMessage();
 
@@ -316,10 +307,7 @@ public class GameController implements
         }
     }
 
-    // ==================== IBoardController Implementation ====================
-
-    /**
-     * Places a ship for the player at the specified position
+    /**Paces a ship for the player at the specified position
      *
      * @param boat Boat to place
      * @param row Starting row
@@ -345,9 +333,7 @@ public class GameController implements
         }
     }
 
-    /**
-     * Gets the state of the player's own board
-     *
+    /**Gets the state of the player's own board
      * @return 2D array representing board state
      */
     @Override
@@ -371,10 +357,7 @@ public class GameController implements
         return currentMatch.getPlayer().getAttackBoard().getBoardState();
     }
 
-    // ==================== ITurnController Implementation ====================
-
-    /**
-     * Checks if it's the player's turn
+    /**Checks if it's the player's turn
      *
      * @return true if player's turn, false otherwise
      */
@@ -383,12 +366,9 @@ public class GameController implements
         return currentMatch != null && currentMatch.isPlayerTurn();
     }
 
-    // ==================== Private Helper Methods ====================
 
-    /**
-     * Validates that game is in a valid state for player actions
-     * Extracted to separate method (SRP)
-     *
+    /**Validates that game is in a valid state for player actions
+     * Extracted to separate method
      * @return true if game is valid for actions, false otherwise
      */
     private boolean validateGameState() {
